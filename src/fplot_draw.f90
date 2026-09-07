@@ -598,7 +598,7 @@ contains
         if (allocated(s%bwidth)) v = 0.5_dp * s%bwidth(j)
     end function bar_hw
 
-    subroutine compute_limits(a, xmin, xmax, ymin, ymax)
+    recursive subroutine compute_limits(a, xmin, xmax, ymin, ymax)
         type(axes_t), intent(in) :: a
         real(dp), intent(out) :: xmin, xmax, ymin, ymax
         integer :: i, j

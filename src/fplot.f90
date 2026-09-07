@@ -935,11 +935,11 @@ contains
                   markeredgewidth, markevery, drawstyle, dashes)
     end subroutine ax_plot
 
-    subroutine ax_plot_y(self, y, fmt, label, lw, color, marker, linestyle, &
+    subroutine ax_plot_y(self, ydata, fmt, label, lw, color, marker, linestyle, &
                          alpha, markersize, markerfacecolor, markeredgecolor, &
                          markeredgewidth, markevery, drawstyle, dashes)
         class(axes), intent(in) :: self
-        real(dp), intent(in) :: y(:)
+        real(dp), intent(in) :: ydata(:)
         character(len=*), intent(in), optional :: fmt, label, color, marker, linestyle
         character(len=*), intent(in), optional :: markerfacecolor, markeredgecolor
         character(len=*), intent(in), optional :: drawstyle
@@ -947,7 +947,7 @@ contains
         real(dp), intent(in), optional :: dashes(:)
         integer, intent(in), optional :: markevery
         call ax_sca(self)
-        call plot(y, fmt, label, lw, color, marker, linestyle, alpha, &
+        call plot(ydata, fmt, label, lw, color, marker, linestyle, alpha, &
                   markersize, markerfacecolor, markeredgecolor, &
                   markeredgewidth, markevery, drawstyle, dashes)
     end subroutine ax_plot_y
@@ -2325,10 +2325,10 @@ contains
 
     ! plot(y): matplotlib numbers the points 0, 1, 2 ... when it is given
     ! only one array, and so does this.
-    subroutine plot_y(y, fmt, label, lw, color, marker, linestyle, alpha, &
+    subroutine plot_y(ydata, fmt, label, lw, color, marker, linestyle, alpha, &
                       markersize, markerfacecolor, markeredgecolor, &
                       markeredgewidth, markevery, drawstyle, dashes)
-        real(dp), intent(in) :: y(:)
+        real(dp), intent(in) :: ydata(:)
         character(len=*), intent(in), optional :: fmt, label, color, marker, linestyle
         character(len=*), intent(in), optional :: markerfacecolor, markeredgecolor
         character(len=*), intent(in), optional :: drawstyle
@@ -2336,12 +2336,12 @@ contains
         real(dp), intent(in), optional :: dashes(:)
         integer, intent(in), optional :: markevery
         integer :: i
-        real(dp) :: idx(size(y))
+        real(dp) :: idx(size(ydata))
 
-        do i = 1, size(y)
+        do i = 1, size(ydata)
             idx(i) = real(i - 1, dp)
         end do
-        call plot_num(idx, y, fmt, label, lw, color, marker, linestyle, alpha, &
+        call plot_num(idx, ydata, fmt, label, lw, color, marker, linestyle, alpha, &
                       markersize, markerfacecolor, markeredgecolor, &
                       markeredgewidth, markevery, drawstyle, dashes)
     end subroutine plot_y
