@@ -3,7 +3,8 @@
 !
 ! One base85 string holding the four faces as the font itself stores
 ! them: quadratic contours in integer font units, deltas coded by
-! magnitude class, outlines that repeat between faces stored once.
+! magnitude class, outlines that repeat between faces stored once,
+! and a slot table that leaves out what it can work out.
 ! fplot_glyphs unpacks it on first use; the format is described
 ! there and in the generator.
 
@@ -297,36 +298,13 @@ module fplot_glyphs_data
 &*_*v7R)5a[l%EFA,;@==/7$mB%7([w;T]4kC;@R3dHw_vAIBcs+cq<ZqzCl]Gj;dV:Z(C1hK*$Xj<0mwk<CF^HC#8eX`@vKTDemBBx.9Q:4[iKzYp6%,1bAU?P-,>+v)/&
 &@$>TEbe;due=ggzD?KjfdI[w(w*)umqPChTC3k0Q0?Z@OCa[E_V;PWZoI][/9Q.QT3O2cfbtN6i*I96TK^rbhg9%N9)TrB#i+b:v+PZF#)>1c^69?-hk?`5/DM1CohR^_&
 &qwmNFGaK?O>6#a@*O0G@o;<Vs:D>B6j+IGv-RbCO@gr,WGEHMVCCDw,QhleXiqU#ot[7VHG@v,o]0b3fT2/ZlntKR+63FgruQbmpn`Of%G15-21<G#>m.a1:=j4Mme8BO&
-&Q3cNut,D+;.Ap.y7^LU^%5oG+g`YBw^O4kIU/M3$uZ7nCZiO.o@s2(l=WV/bN#:)Bf>=^/1me-E.0Y%Cak#/vq5k-WR^#R@P:t4AkMNEh))V2v9*n,@yQ=p]buA?^>RFl&
-&rXqE1b+G/NVjSQm8TV(-pCcYB[*4O(%aV[88SYn9t/,;>_p<XO,QUq[SH7MPo7t9i-A@c8b15*`ApyXyw7U$S,Lp^XUg<NSvLy<v)QQ[.)o:GEsGaUpz[jD..y[f/i6;-&
-&9j@gb8)dTP@s=j]8ZFbDIU=A;Uvn]SIg=tq[ST;#(Do:NATY/QCqgx/kQ*nWYw?,Pwv/o[4#.60$[h6<SSpjfM-i8G9I<Afx]1aXZD(uZ(bft2DH(SY1gpi(M+B>Z?WWI&
-&O($xm<mQbaSPZ)Iq[Sa7#############################################################################################################&
-&##########################################################$0EcAMt>##########YBqP_################################################&
-&###############################################################$IXw##############################################################&
-&############################################$IXwN0kUP######################$So:Ii+v7kNxj5<t2f^D9qb$YugW+*__hnIIrUrIUORn.?ys:VI#+%&
-&[3IKCnY42PGLmu-GLEFfg.i5PGFT24c27o######################$O*lsWE.C8M>f766k(QfRvn)_3AmU-S*<o5<T1(</(1d$.R+i[573Y19LNur/?8Q)Dd*9Ka^i&
-&[<s>bSDpS#`D)?+/=Fv*[-h<GXfsDV:nrwTtP4Jb,7Oflj2N[h;qCybD;9`K*lj?f,Pa^w0gnEG]#55kQ,_,_dX;tp0%+ZJ6V8YkfLRO9>HtUfjvJ74+N7zv0uBg^$]Ap&
-&O]B7c0v/kJs:K*P8rWz.%@s=bNM63YRA%(/PYIyUn,/o+$6NLi<Z9)]l]E[;X-3hYVdexNADY6LpK3a)Toi7(>CUHJbC)wG4,gOI4/=D8M$xYEo]-vmys[,,N:JR>3u59&
-&n+UJ=;pCU%akF2F)<A6tsH-GtC830C+S;aab[ZwZZC-:W=ydZ%p]HNdL^`a^B5W$(FVHd;.hC**P;.)gnH###############################################&
-&#########################################################################################################################$P%=1miN&
-&0kUP######vHjV################################################################################################################$rQ&
-&gU)ZG######################################################################################################$rQh6`mI##############&
-&#########%A0vFGlfyj*sQ>3Ul=+6NgE:,Y*j:g]`-7xTyJmg5ojo^f[.OCPo`C=5XZ8`jl(P[.l[KtG_q]qcW@fM`rn;^%f#######################%*pIA]FGCF&
-&lrv@Izv_@aS?E>0u+srkdlk>Uj%MT6Wb^)V(./7SVx_H)=0<171D3=_Vrl+8^F0=a64?Q1fU)h7$1;A^W[OYr*gjvi8cXq6hF5(X_LCtf>Eebk4R#%8$;A`k)lejbod0_&
-&`M-Qp_,bQU$.?YCO5LYG*[8[8Jl`pm>wnQGxuWSzzh=vh]-bFJdKG8K[3,#(o*gS]tbi_L8A.YtKHz0ltL1FlZvN0j4.Tne?zEDUPCkhFl7HCLN)YFw7KOV8R^wY9BYfZ&
-&U;2u3+?h22Hnhw2I;t3l71zonI;T.9/fc.M$6;t#);(ZXMCSiR:6ho1z)B2,9j#HQHG%>oHv)2g.)zb?*qUVUHU+sV`lFzQGMlA[%EV2Ophf8[gRk_13ywTG=m2vq(4=U&
-&Vc3`Ui=1o;4#6SWbHvu7#############################################################################################################&
-&#######################################################%#$<514I?,U######$,Cb#####################################################&
-&############################################################%QO/N$d##############################################################&
-&#########################################%QO0AVl########################%bZN4wSjavk^>F.z0l0mS^XhzjQ^WpR<v.+Zg2zkxIwMFQ.7hd]D-2`9F&
-&w7#U#)?r1W<%#GZgINe3-%(hQct>Acb8C;###################%YJg`l_rJd`WC%S>]dB-Q2(I?W]-ZAJq%/#[nt:bynbNmfr,+%HWA5y*QGyqAb1wo5VSh:S^>BVK&
-&14$[xqk61SZ75l#5Eqn>5@C_g03CKl#tL_e7O`wRd8@v#P%i?^*exjIV_j2l=OD<R(V7RoQaRLNB4.y004(cF.7v0EfOh4yfO5>JEt.r+_EnRt69.DkOgD=A^U6o(Qd?r&
-&zd]Jkd<Fn_x6UqI0<D0J3hTT)tCZPZC_rrn^9M7n5=iA<[]5Lg@GNQn%:O0A)qMDbk@qUd)Fxp(Gk2P=:a_PK86G;%3.GJKnP,]NIPbL345QoRuarMF,JTRu8JHq(Qm-G&
-&;*mRia`A7cXD7#JbkdV$u,>-cr[Qkixaiz<eR7ftU,Z[ApGTh#pU_<rjCp0KydTs*0s7]/3X3]-u`PGfJh###############################################&
-&######################################################################################################################%UWpTXz`7:#&
-&######$^pYb>Eu#############################################################################################################(Awg@]&
-&########################################################################################################(AwhL%###################&
-&######(yDHfg>taHVn*dtremsQD/N(GF$Jn6hewx/ea/Yu5n:iS2#-UI]]iS=(gJij##+5ng2AzVUMnUa`-Lr+EnoozrNr8j####################(RFMvj)Hn(vW4&
-&_Opo^Jye7wK`cZ%>esz`<dY,=@Xap?0[12G?KrR]6I=:Fo+tDZ.)G9tuPhQ/Y]n6*-g3Rzsrv5*KJ"
+&Q3cNut,D+;.Ap.y7^LU^%5oG+g`YBw^O4kIU/M3$uZ7nCZiO.o@s2(l=WV/bN#:)Bf>=^/1me-E.0Y%GQ(x<[1#x<[1#x<R+######DO:F2#2^)P#2bW#ms]fEx6qpr-:&
+&I3/Fn4:)AWB8./27#03WU[HIUXs;@BZYM;LzS+LEl=_YDkB(b[DwDGN2n;i^MWy]7K#j3Vp4,?NS7u$Lvn82]xwrJ8c#-TlhuPE.TP@7upN`wEEw$.JDpr2p1T9i][%7Z&
+&eiLxgz)-Z=5K^D*x>GzFlo<=oo_sr`5tV<iau9*7k1h.i@.(yoYGI12p:N6i][/C[8k?gFnlFd^JucrGDg=`=#?]jNL</g<X9FGufbJ<J/ZxC$o2nwclAlDiku2$>0(DS&
+&D1.W)u+vwvdrQy8m,P9%;:7%$<y@6uZ;jR73k;MJRs#2xq,d.NAbE$c5slu81lLg29+V*W3K5kw@7OG.Q0Bql5aT3(lxa?x=c3.,ZOG/SiqQ0:$`NqS2X_xxO]<.g`tn8&
+&,?u+F72Vt6tELP9X#nH:3T%VAyJ]r]Fe4@te?,7nD[P5U$>g*KG2Ou4U@N%u)G8X-3ETF.@dU_zNr?4-_K4S$DVX#tLV(/wi@<ca,+zQM1V%p_.O#BFXO#oj[qa>5OQZ+&
+&N?$B*.N(8FIySui)5CH,?OC:Fz<V<eH0=kRsV[$ib4CSXjH%>t5s2E92tG;8tXZ5lM7u;j#*cjg$F#B;u,fX01Af]#(D0f,HT#VQBn<P4Lo0f,dIT$Ct,chx.1<P4Lo0f&
+&,dISAm,y#MT>^(ua?3*8osP4QbNd:@$X;+*b/@Up9]LV^=r]oL@,`T$<]a(C;BWMEsAm/KU`u0WAVA7$g9;<P4Lo/N<qH2%F88<P4Lo0f,dISunS/0f,dIT$Cuc<Ohv:n&
+&[l?a%[`Mb-4#j8-:meyKdYX*0[*w./k1C_/k^zx)@7^Z<P4Hc*kf940f,Gr"
 
 end module fplot_glyphs_data

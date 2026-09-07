@@ -20,9 +20,19 @@
 !     points, all gamma coded, and then for every point in turn one bit
 !     saying whether it lies on the curve and its x and y as deltas from
 !     the point before it (the first is a delta from the origin);
-!   * per slot — one code point in one face — a 12 bit advance width and
-!     the 10 bit number of the outline it draws, 0 for a blank. Outlines
-!     that repeat between faces are stored once and pointed at twice.
+!   * one bit per code point in the table saying whether the font has
+!     anything for it, the four faces covering the same ones, and then
+!     for each of those code points in each face an advance width and
+!     the number of the outline it draws. The width is 12 raw bits in
+!     the first face and a delta elsewhere, guessed from the same
+!     character in the face two back — the faces run regular, bold,
+!     oblique, bold oblique, so that is the upright the slanted one is a
+!     copy of, and the guess is usually exact. The outline number is one
+!     bit when it is the next one not yet used, which it usually is
+!     since outlines are numbered in the order they are first drawn, and
+!     otherwise that bit and 10 more, 0 meaning nothing to draw.
+!     Outlines that repeat between faces are stored once and pointed at
+!     twice.
 !
 ! A delta is folded to a non-negative number, small magnitudes staying
 ! small, and then written as the position of its leading one — a
@@ -293,7 +303,8 @@ contains
     end subroutine ensure_loaded
 
     subroutine unpack()
-        integer :: i, j, k, nb, nc, np, ip, ic, xx, yy
+        integer :: i, j, k, f, s, nc, np, ip, ic, used, xx, yy
+        logical :: pres(NCH)
 
         call from_base85()
         call build_code()
@@ -325,13 +336,36 @@ contains
             OBEG(i + 1) = ic + 1
         end do
 
-        do i = 1, NSLOT
-            SADV(i) = get_bits(ADV_BITS)
-            SOUT(i) = get_bits(OUT_BITS)
+        ! The slots. A code point the table has nothing for takes one bit
+        ! here and no room in any face; everything else is written for
+        ! each face in turn, and read against what is already known.
+        do i = 1, NCH
+            pres(i) = get_bit() == 1
+        end do
+        SADV = 0
+        SOUT = 0
+        used = 0
+        do f = 1, NFACE
+            do i = 1, NCH
+                if (.not. pres(i)) cycle
+                s = (f - 1)*NCH + i
+                if (f == 1) then
+                    SADV(s) = get_bits(ADV_BITS)
+                else
+                    SADV(s) = SADV(s - min(f - 1, 2)*NCH) + get_delta()
+                end if
+                if (get_bit() == 1) then
+                    used = used + 1
+                    SOUT(s) = used
+                else
+                    SOUT(s) = get_bits(OUT_BITS)
+                end if
+            end do
         end do
 
-        nb = ip
-        if (nb /= NPT .or. ic /= NCONT) error stop "fplot_glyphs: blob does not fill the tables"
+        if (ip /= NPT .or. ic /= NCONT .or. used /= NOUT) then
+            error stop "fplot_glyphs: blob does not fill the tables"
+        end if
         deallocate (BUF)
     end subroutine unpack
 

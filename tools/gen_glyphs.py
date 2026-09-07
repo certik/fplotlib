@@ -14,10 +14,13 @@ integer font units. Every point is a delta from the one before it, coded as
 a magnitude class through a fixed prefix code plus the raw bits under the
 leading one, which is deflate's trick for distances. Whole outlines repeat
 between faces -- DejaVu builds the Greek capitals out of the Latin ones --
-so identical ones are stored once and the slots point at them. The bit
-stream is then written into the Fortran source as one base85 string, and
-fplot_glyphs unpacks it on first use and elevates the quadratics to the
-cubics the rendering API speaks.
+so identical ones are stored once and the slots point at them. The slots
+themselves are written for the code points the table has something for
+rather than for the gaps too, an outline number is usually just "the next
+one", and an advance width is a delta from the same character in the face
+it is a slanted copy of. The bit stream is then written into the Fortran
+source as one base85 string, and fplot_glyphs unpacks it on first use and
+elevates the quadratics to the cubics the rendering API speaks.
 
     pixi run python tools/gen_glyphs.py
 """
@@ -329,7 +332,19 @@ class Reader:
                 raise SystemExit("bad prefix code in blob")
 
 
-def encode(outlines, slots):
+def predicted_from(face):
+    """How many faces back the advance widths are guessed from.
+
+    The faces run regular, bold, oblique, bold oblique, so the face two
+    back is the same weight standing upright, which in DejaVu is the same
+    glyph sheared and has exactly the same widths. The second face has
+    only the first to go on. Nothing is asserted: a bad guess just costs
+    more bits than a good one.
+    """
+    return min(face, 2)
+
+
+def encode(outlines, slots, present):
     """The whole table as one bit stream."""
     w = Writer()
     w.gamma(len(outlines))
@@ -344,13 +359,32 @@ def encode(outlines, slots):
                 w.delta(x - px)
                 w.delta(y - py)
                 px, py = x, y
-    for adv, idx in slots:
-        w.raw(adv, ADV_BITS)
-        w.raw(idx, OUT_BITS)
+
+    nch = len(present)
+    for p in present:
+        w.bit(1 if p else 0)
+    used = 0
+    for face in range(len(slots) // nch):
+        for i in range(nch):
+            if not present[i]:
+                continue
+            adv, idx = slots[face*nch + i]
+            if face == 0:
+                w.raw(adv, ADV_BITS)
+            else:
+                w.delta(adv - slots[(face - predicted_from(face))*nch + i][0])
+            # Outlines are numbered in the order they are first drawn, so
+            # a slot usually wants the next number that has not been used.
+            if idx == used + 1:
+                used += 1
+                w.bit(1)
+            else:
+                w.bit(0)
+                w.raw(idx, OUT_BITS)
     return w.bytes()
 
 
-def decode(blob, nslot):
+def decode(blob, nch, nface):
     """The inverse of encode, so that the round trip can be checked."""
     r = Reader(blob)
     outlines = []
@@ -367,8 +401,25 @@ def decode(blob, nslot):
                 pts.append((px, py))
             contours.append((pts, on))
         outlines.append(contours)
-    slots = [(r.raw(ADV_BITS), r.raw(OUT_BITS)) for _ in range(nslot)]
-    return outlines, slots
+
+    present = [r.bit() == 1 for _ in range(nch)]
+    slots = [(0, 0)]*(nch*nface)
+    used = 0
+    for face in range(nface):
+        for i in range(nch):
+            if not present[i]:
+                continue
+            if face == 0:
+                adv = r.raw(ADV_BITS)
+            else:
+                adv = slots[(face - predicted_from(face))*nch + i][0] + r.delta()
+            if r.bit() == 1:
+                used += 1
+                idx = used
+            else:
+                idx = r.raw(OUT_BITS)
+            slots[face*nch + i] = (adv, idx)
+    return outlines, slots, present
 
 
 def base85(blob):
@@ -471,9 +522,14 @@ def main() -> None:
         if adv >= 1 << ADV_BITS or idx >= 1 << OUT_BITS:
             raise SystemExit(f"slot ({adv}, {idx}) does not fit its bits")
 
-    blob = encode(outlines, slots)
-    back = decode(blob, len(slots))
-    if back != (outlines, slots):
+    # The four faces cover the same code points, so which of them the
+    # table has anything for is one bit each rather than one empty slot
+    # each in every face.
+    present = [c in keep for c in codes]
+
+    blob = encode(outlines, slots, present)
+    back = decode(blob, nch, len(FACES))
+    if back != (outlines, slots, present):
         raise SystemExit("the blob does not decode to what went into it")
 
     text = base85(blob)
@@ -486,7 +542,8 @@ def main() -> None:
         "!",
         "! One base85 string holding the four faces as the font itself stores",
         "! them: quadratic contours in integer font units, deltas coded by",
-        "! magnitude class, outlines that repeat between faces stored once.",
+        "! magnitude class, outlines that repeat between faces stored once,",
+        "! and a slot table that leaves out what it can work out.",
         "! fplot_glyphs unpacks it on first use; the format is described",
         "! there and in the generator.",
         "",
