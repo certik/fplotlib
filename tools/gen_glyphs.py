@@ -175,6 +175,96 @@ def contours_to_cubic(contours):
     return verbs, pts
 
 
+def path_cycles(verbs, pts):
+    """A path as one closed cycle of segments per contour.
+
+    Each segment is its verb and the points it consumes, and the line back
+    to the start that contours_to_cubic leaves for closePath to imply is
+    put back, so that two ways of drawing the same closed contour compare
+    equal whichever point they start from.
+    """
+    cycles = []
+    i = 0
+    for v in verbs:
+        if v == VERB_MOVE:
+            start = cur = pts[i]
+            segs = []
+            i += 1
+        elif v == VERB_LINE:
+            segs.append((v, (pts[i],)))
+            cur = pts[i]
+            i += 1
+        elif v == VERB_CUBIC:
+            segs.append((v, tuple(pts[i:i + 3])))
+            cur = pts[i + 2]
+            i += 3
+        else:
+            if cur != start:
+                segs.append((VERB_LINE, (start,)))
+            cycles.append(segs)
+    return cycles
+
+
+def same_shape(a, b, tol=1e-9):
+    """True when two paths are the same closed contours, started anywhere."""
+    ca, cb = path_cycles(*a), path_cycles(*b)
+    if len(ca) != len(cb):
+        return False
+    for x, y in zip(ca, cb):
+        if len(x) != len(y):
+            return False
+        n = len(x)
+        if n == 0:
+            # A contour of one point draws nothing, from any rotation.
+            continue
+        if not any(
+            all(
+                x[(s + j) % n][0] == y[j][0]
+                and all(abs(p - q) < tol for u, v in zip(x[(s + j) % n][1], y[j][1])
+                        for p, q in zip(u, v))
+                for j in range(n)
+            )
+            for s in range(n)
+        ):
+            return False
+    return True
+
+
+def delta_bits(a, b):
+    """What it costs to write the step from one point to the next."""
+    total = 0
+    for v in (b[0] - a[0], b[1] - a[1]):
+        c = zigzag(v).bit_length()
+        total += CLEN[c] + max(c - 1, 0)
+    return total
+
+
+def best_storage(contours):
+    """Turn each contour to the point it is cheapest to store it from.
+
+    A closed contour draws the same shape whichever of its points comes
+    first, and fplot_glyphs finds its own place to start drawing, so the
+    rotation is the generator's to choose. Exactly one edge of the cycle
+    goes unstored -- the one the contour is broken at -- and the step in
+    from the contour before takes its place, so the choice is which edge
+    to drop and where to jump in. It saves about 3% of the blob and costs
+    the decoder nothing. The rest of the cycle costs the same however it
+    is turned, so only the jump in and the dropped edge decide it.
+    """
+    stored = []
+    cur = (0, 0)
+    for pts, on in contours:
+        n = len(pts)
+        _, k = min(
+            (delta_bits(cur, pts[k]) - delta_bits(pts[(k - 1) % n], pts[k]), k)
+            for k in range(n)
+        )
+        stored.append(([pts[(k + i) % n] for i in range(n)],
+                       [on[(k + i) % n] for i in range(n)]))
+        cur = pts[(k - 1) % n]
+    return stored
+
+
 def pen_outline(glyphset, name):
     """(verbs, points) as the font's own pen draws them, for checking."""
     pen = DecomposingRecordingPen(glyphset)
@@ -498,6 +588,13 @@ def main() -> None:
                 abs(a - b) > 1e-9 for p, q in zip(got[1], want[1]) for a, b in zip(p, q)
             ):
                 raise SystemExit(f"{face} U+{code:04X}: outline walk disagrees")
+
+            # Turning a contour moves where the drawing starts, so what
+            # has to hold is that the contours come out as the same closed
+            # shapes, not as the same list.
+            contours = best_storage(contours)
+            if not same_shape(contours_to_cubic(contours), want):
+                raise SystemExit(f"{face} U+{code:04X}: turning the contours changed them")
 
             if contours:
                 key = repr(contours)
