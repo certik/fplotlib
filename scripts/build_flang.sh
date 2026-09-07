@@ -25,6 +25,7 @@ $FLANG -c "$ROOT/src/fplot_tri.f90"
 $FLANG -c "$ROOT/src/fplot_svg.f90"
 $FLANG -c "$ROOT/src/fplot_png.f90"
 $FLANG -c "$ROOT/src/fplot_backend_svg.f90"
+$FLANG -c "$ROOT/src/fplot_glyphs_data.f90"
 $FLANG -c "$ROOT/src/fplot_glyphs.f90"
 $FLANG -c "$ROOT/src/fplot_raster.f90"
 $FLANG -c "$ROOT/src/fplot_textpath.f90"
@@ -43,11 +44,11 @@ $FLANG -c "$ROOT/src/fplot.f90"
 # Test program
 $FLANG -o "$BUILD/test_plots" \
     "$ROOT/tests/test_plots.f90" \
-    fplot_colors.o fplot_style.o fplot_render.o fplot_scale.o fplot_cmap.o fplot_ticks.o fplot_contour.o fplot_tri.o fplot_svg.o fplot_backend_svg.o fplot_backend_pdf.o fplot_backend_eps.o fplot_glyphs.o fplot_png.o fplot_textpath.o fplot_raster.o fplot_backend_png.o fplot_gif.o fplot_proj3d.o fplot_mathtext.o fplot_dates.o fplot_state.o fplot_artist.o fplot_draw.o fplot.o
+    fplot_colors.o fplot_style.o fplot_render.o fplot_scale.o fplot_cmap.o fplot_ticks.o fplot_contour.o fplot_tri.o fplot_svg.o fplot_backend_svg.o fplot_backend_pdf.o fplot_backend_eps.o fplot_glyphs_data.o fplot_glyphs.o fplot_png.o fplot_textpath.o fplot_raster.o fplot_backend_png.o fplot_gif.o fplot_proj3d.o fplot_mathtext.o fplot_dates.o fplot_state.o fplot_artist.o fplot_draw.o fplot.o
 
 # Demo
 $FLANG -o "$BUILD/demo" \
     "$ROOT/examples/demo.f90" \
-    fplot_colors.o fplot_style.o fplot_render.o fplot_scale.o fplot_cmap.o fplot_ticks.o fplot_contour.o fplot_tri.o fplot_svg.o fplot_backend_svg.o fplot_backend_pdf.o fplot_backend_eps.o fplot_glyphs.o fplot_png.o fplot_textpath.o fplot_raster.o fplot_backend_png.o fplot_gif.o fplot_proj3d.o fplot_mathtext.o fplot_dates.o fplot_state.o fplot_artist.o fplot_draw.o fplot.o
+    fplot_colors.o fplot_style.o fplot_render.o fplot_scale.o fplot_cmap.o fplot_ticks.o fplot_contour.o fplot_tri.o fplot_svg.o fplot_backend_svg.o fplot_backend_pdf.o fplot_backend_eps.o fplot_glyphs_data.o fplot_glyphs.o fplot_png.o fplot_textpath.o fplot_raster.o fplot_backend_png.o fplot_gif.o fplot_proj3d.o fplot_mathtext.o fplot_dates.o fplot_state.o fplot_artist.o fplot_draw.o fplot.o
 
 echo "Built: $BUILD/test_plots $BUILD/demo"
