@@ -13,8 +13,41 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Linux (flang + lfortran)
+  compilers:
+    name: ${{ matrix.compiler }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Every compiler is a gate, so report all four rather than stopping at
+      # the first one that breaks.
+      fail-fast: false
+      matrix:
+        compiler: [gfortran, ifx, lfortran, flang] 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up ${{ matrix.compiler }}
+        id: fortran
+        uses: fortran-lang/setup-fortran@v2.0.0-beta.8
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: latest
+
+      - uses: fortran-lang/setup-fpm@v10
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build with ${{ matrix.compiler }}
+        run: fpm build --compiler ${{ steps.fortran.outputs.fc }}
+
+      # test_plots writes to tests/out with paths relative to the repo root,
+      # which is where fpm runs it from.
+      - name: Test with ${{ matrix.compiler }}
+        run: |
+          mkdir -p tests/out
+          fpm test --compiler ${{ steps.fortran.outputs.fc }}
+
+  compare:
+    name: Compare against matplotlib
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,13 +56,10 @@ jobs:
           pixi-version: v0.76.1
           cache: true
           locked: true
-      - name: Test with Flang
-        run: pixi run test-flang
-      - name: Test with LFortran
-        run: pixi run test-lfortran
-      - name: Build as an fpm package
-        run: pixi run fpm-flang && pixi run fpm-lfortran
-      - name: Compare against matplotlib references
+      # Each compare task pulls in mpl-refs and test-flang through its
+      # depends-on, so the reference images and the fplot output are generated
+      # once between them.
+      - name: Compare SVG output against matplotlib
         run: pixi run compare
       - name: Compare PNG output against matplotlib
         run: pixi run compare-png
