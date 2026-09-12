@@ -2649,7 +2649,7 @@
         },
         {
           "path": "bar3d.png",
-          "sha256": "98e25a939fb6602ec8e51ff3a5e781cc5507572b5b929aebb2f03f261e44361e",
+          "sha256": "6cb71a60a5b74a3808f6999efc211284a3b49b290c790d20f4907320785d46c1",
           "size": 57527
         },
         {
@@ -3029,7 +3029,7 @@
         },
         {
           "path": "contour3d.png",
-          "sha256": "593521ccb984587658a7d29741c1e555916c9b2404e45cf27af717c929951b05",
+          "sha256": "ef45b2a12d367dfe53866a62f327f391799dd815146e3803fd3be93b1d2adcd5",
           "size": 94817
         },
         {
@@ -3769,7 +3769,7 @@
         },
         {
           "path": "line3d.png",
-          "sha256": "d2872916de6c86e5ee3350d1368ebcf5ab065ded046bd9154fc235a4368279ba",
+          "sha256": "10bd8a3f33c90577ddccf73e7b9c833695428e8b4f16357f9a5f91a3072d6e3e",
           "size": 67870
         },
         {
@@ -4249,7 +4249,7 @@
         },
         {
           "path": "quiver3d.png",
-          "sha256": "7398bbdbf57ff8fac1d7c7c83739f45fa132a279e81ecb00278a361ca0b2013b",
+          "sha256": "9a1adedd15b285273be9136f6733412bdc012e860a213e8eb85d65d5c6a7457a",
           "size": 83816
         },
         {
@@ -4569,7 +4569,7 @@
         },
         {
           "path": "surface3d.png",
-          "sha256": "2e2c3fc7cc7bf534c379f7f171b2274d43ec69cfa215fa2e4734c7bc424d63ee",
+          "sha256": "641b388d9280d1eaae87949e9a5973767eb165ee103332c44cc0884ecde729cf",
           "size": 86896
         },
         {
@@ -4589,7 +4589,7 @@
         },
         {
           "path": "surface3d_extra.png",
-          "sha256": "7e91c273e58ca2b6560704719d71502735e933e82c49292df37332a455aa6570",
+          "sha256": "e0296bfcc363b006c82cfe98ae573382718734789d06123d3edb1738d3a1dba9",
           "size": 109161
         },
         {
@@ -4889,7 +4889,7 @@
         },
         {
           "path": "trisurf.png",
-          "sha256": "557d249c446b4aebb28e0db06fb08b880c721f84b94285730e24d1c6adbafdfd",
+          "sha256": "b7c66b9c22558ae1a46f0666ed7e27d8ca78ba5fd6328fe1fb960a0f8d638d73",
           "size": 78115
         },
         {
