@@ -13,29 +13,51 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Linux (flang + lfortran)
+  compilers:
+    name: ${{ matrix.compiler }}
     runs-on: ubuntu-latest
+    env:
+      FPLOT_TEST_PYTHON: python3
+    strategy:
+      # Every compiler is a gate, so report all four rather than stopping at
+      # the first one that breaks.
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gfortran
+            hash_profile: linux-gfortran
+            verify_hashes: true
+          - compiler: ifx
+            hash_profile: linux-ifx
+            verify_hashes: true
+          - compiler: lfortran
+            hash_profile: linux-lfortran
+            verify_hashes: true
+          - compiler: flang
+            hash_profile: linux-flang
+            verify_hashes: true
     steps:
       - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.10.1
+
+      - name: Set up ${{ matrix.compiler }}
+        id: fortran
+        uses: fortran-lang/setup-fortran@v2.0.0-beta.8
         with:
-          pixi-version: v0.76.1
-          cache: true
-          locked: true
-      - name: Test with Flang
-        run: pixi run test-flang
-      - name: Test with LFortran
-        run: pixi run test-lfortran
-      - name: Build as an fpm package
-        run: pixi run fpm-flang && pixi run fpm-lfortran
-      - name: Compare against matplotlib references
-        run: pixi run compare
-      - name: Compare PNG output against matplotlib
-        run: pixi run compare-png
-      - name: Compare PDF output against matplotlib
-        run: pixi run compare-pdf
-      - name: Compare EPS output against matplotlib
-        run: pixi run compare-eps
-      - name: Compare GIF output against matplotlib
-        run: pixi run compare-gif
+          compiler: ${{ matrix.compiler }}
+          version: latest
+
+      - uses: fortran-lang/setup-fpm@v10
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build with ${{ matrix.compiler }}
+        run: fpm build --compiler ${{ steps.fortran.outputs.fc }}
+
+      # test_plots writes to tests/out, then verifies the hashes for the
+      # selected compiler profile.
+      - name: Test with ${{ matrix.compiler }}
+        id: test
+        env:
+          FPLOT_HASH_PROFILE: ${{ matrix.hash_profile }}
+        run: |
+          fpm test --compiler ${{ steps.fortran.outputs.fc }}

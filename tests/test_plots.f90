@@ -1,4 +1,5 @@
 program test_plots
+    use, intrinsic :: iso_fortran_env, only: error_unit
     use fplot
     implicit none
     integer :: fig1
@@ -82,6 +83,9 @@ program test_plots
     real(dp) :: stx(nst), sty(3, nst)
     character(len=4), parameter :: stlab(3) = ["low ", "mid ", "high"]
     real(dp), parameter :: pi = 3.14159265358979323846_dp
+    logical :: test_paths_ready = .false.
+    character(len=1024) :: test_repo_root = ""
+    character(len=1024) :: test_output_dir = ""
 
     ! Shared data
     do i = 1, n
@@ -1509,10 +1513,11 @@ program test_plots
         call title("anim_sine")
         call add_frame()
     end do
-    call save_animation("tests/out/anim_sine.gif", fps=10.0_dp)
-    print *, "wrote tests/out/anim_sine.gif"
+    call save_animation(output_path("anim_sine", ".gif"), fps=10.0_dp)
+    print *, "wrote ", trim(output_path("anim_sine", ".gif"))
 
     print *, "All test plots written."
+    call verify_reference_hashes()
 
 contains
 
@@ -1535,15 +1540,131 @@ contains
         character(len=*), intent(in), optional :: facecolor, bbox_inches
         real(dp), intent(in), optional :: dpi
 
-        call savefig("tests/out/"//stem//".svg", facecolor=facecolor, &
+        call savefig(output_path(stem, ".svg"), facecolor=facecolor, &
                      bbox_inches=bbox_inches, dpi=dpi)
-        call savefig("tests/out/"//stem//".pdf", facecolor=facecolor, &
+        call savefig(output_path(stem, ".pdf"), facecolor=facecolor, &
                      bbox_inches=bbox_inches, dpi=dpi)
-        call savefig("tests/out/"//stem//".png", facecolor=facecolor, &
+        call savefig(output_path(stem, ".png"), facecolor=facecolor, &
                      bbox_inches=bbox_inches, dpi=dpi)
-        call savefig("tests/out/"//stem//".eps", facecolor=facecolor, &
+        call savefig(output_path(stem, ".eps"), facecolor=facecolor, &
                      bbox_inches=bbox_inches, dpi=dpi)
-        print *, "wrote tests/out/"//stem//".svg, .pdf, .png and .eps"
+        print *, "wrote ", trim(output_path(stem, ".svg")), ", .pdf, .png and .eps"
     end subroutine save_all
+
+    subroutine verify_reference_hashes()
+        character(len=32) :: env
+        character(len=256) :: python_cmd
+        character(len=1024) :: command, cmdmsg
+        integer :: status, cmdstat, exitstat
+
+        call get_environment_variable("FPLOT_SKIP_HASH_VERIFY", env, status=status)
+        if (status == 0) then
+            if (len_trim(env) > 0 .and. trim(env) /= "0") then
+                print *, "Skipping reference hash verification (FPLOT_SKIP_HASH_VERIFY set)."
+                return
+            end if
+        end if
+
+        call get_environment_variable("FPLOT_TEST_PYTHON", python_cmd, status=status)
+        if (status /= 0 .or. len_trim(python_cmd) == 0) python_cmd = "python"
+
+        call ensure_test_paths(python_cmd)
+        command = trim(python_cmd)//' "'//trim(join_path(trim(test_repo_root), "tests/verify_reference_hashes.py"))//'"'
+        call execute_command_line(trim(command), wait=.true., exitstat=exitstat, &
+                                  cmdstat=cmdstat, cmdmsg=cmdmsg)
+        if (cmdstat /= 0) then
+            write (error_unit, '(a)') "fplot: failed to start reference hash verifier: "//trim(cmdmsg)
+            error stop 1
+        end if
+        if (exitstat /= 0) then
+            write (error_unit, '(a,i0)') "fplot: reference hash verification failed with exit code ", exitstat
+            error stop 1
+        end if
+    end subroutine verify_reference_hashes
+
+    function output_path(stem, suffix) result(path)
+        character(len=*), intent(in) :: stem, suffix
+        character(len=1024) :: path
+
+        call ensure_test_paths()
+        path = join_path(trim(test_output_dir), trim(stem)//trim(suffix))
+    end function output_path
+
+    subroutine ensure_test_paths(python_cmd)
+        character(len=*), intent(in), optional :: python_cmd
+        character(len=1024) :: exe_path, probe, mkdir_cmd, cmdmsg, pycmd
+        integer :: status, cmdstat, exitstat, slash
+        logical :: exists
+
+        if (test_paths_ready) return
+
+        call get_command_argument(0, exe_path, status=status)
+        if (status == 0 .and. len_trim(exe_path) > 0) then
+            probe = normalize_path(trim(exe_path))
+            slash = index(trim(probe), "/", back=.true.)
+            if (slash > 0) then
+                probe = probe(:slash - 1)
+            else
+                probe = "."
+            end if
+
+            do
+                inquire(file=trim(join_path(trim(probe), "fpm.toml")), exist=exists)
+                if (exists) then
+                    test_repo_root = trim(probe)
+                    exit
+                end if
+                slash = index(trim(probe), "/", back=.true.)
+                if (slash <= 0) exit
+                if (slash == 3 .and. probe(2:2) == ":") then
+                    probe = probe(:slash)
+                else
+                    probe = probe(:slash - 1)
+                end if
+            end do
+        end if
+
+        if (len_trim(test_repo_root) == 0) test_repo_root = "."
+        test_output_dir = join_path(trim(test_repo_root), "tests/out")
+
+        pycmd = "python"
+        if (present(python_cmd)) then
+            if (len_trim(python_cmd) > 0) pycmd = trim(python_cmd)
+        end if
+        mkdir_cmd = trim(pycmd)//' -c "from pathlib import Path; Path(r'''//trim(test_output_dir)//''').mkdir(parents=True, exist_ok=True)"'
+        call execute_command_line(trim(mkdir_cmd), wait=.true., exitstat=exitstat, &
+                                  cmdstat=cmdstat, cmdmsg=cmdmsg)
+        if (cmdstat /= 0 .or. exitstat /= 0) then
+            write (error_unit, '(a)') "fplot: failed to create output directory: "//trim(test_output_dir)
+            if (len_trim(cmdmsg) > 0) write (error_unit, '(a)') trim(cmdmsg)
+            error stop 1
+        end if
+
+        test_paths_ready = .true.
+    end subroutine ensure_test_paths
+
+    function join_path(base, leaf) result(path)
+        character(len=*), intent(in) :: base, leaf
+        character(len=1024) :: path
+        integer :: n
+
+        path = trim(base)
+        n = len_trim(path)
+        if (n > 0 .and. path(n:n) /= "/") then
+            path = trim(path)//"/"
+        end if
+        path = trim(path)//trim(leaf)
+    end function join_path
+
+    function normalize_path(raw) result(path)
+        character(len=*), intent(in) :: raw
+        character(len=1024) :: path
+        integer :: idx
+
+        path = trim(raw)
+        do idx = 1, len_trim(path)
+            if (path(idx:idx) == "\\") path(idx:idx) = "/"
+        end do
+    end function normalize_path
 
 end program test_plots
