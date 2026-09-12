@@ -275,10 +275,9 @@ SVG looks like. PNG, PDF and EPS are compared as pixels, since there fplot
 decides.
 
 CI (Linux) runs `fpm test` across the compiler matrix and selects a hash
-profile per compiler. `gfortran`, `lfortran` and `flang` are verified against
-committed profiles; `ifx` currently uploads a candidate manifest so its
-compiler-specific baseline can be reviewed and added intentionally. The
-matplotlib comparison scripts remain available for deeper fidelity audits.
+profile per compiler. `gfortran`, `ifx`, `lfortran` and `flang` are verified
+against committed profiles. The matplotlib comparison scripts remain available
+for deeper fidelity audits.
 
 ## Layout
 

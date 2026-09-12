@@ -29,7 +29,7 @@ jobs:
             verify_hashes: true
           - compiler: ifx
             hash_profile: linux-ifx
-            verify_hashes: false
+            verify_hashes: true
           - compiler: lfortran
             hash_profile: linux-lfortran
             verify_hashes: true
@@ -57,16 +57,7 @@ jobs:
       # selected compiler profile.
       - name: Test with ${{ matrix.compiler }}
         id: test
-        continue-on-error: ${{ !matrix.verify_hashes }}
         env:
           FPLOT_HASH_PROFILE: ${{ matrix.hash_profile }}
         run: |
           fpm test --compiler ${{ steps.fortran.outputs.fc }}
-
-      - name: Upload candidate hash manifest for ${{ matrix.compiler }}
-        if: ${{ !matrix.verify_hashes }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.hash_profile }}-candidate
-          path: tests/reference_hashes.${{ matrix.hash_profile }}.candidate.json
-          if-no-files-found: error
