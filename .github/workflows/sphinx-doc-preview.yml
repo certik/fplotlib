@@ -41,6 +41,7 @@ jobs:
           pip install -r docs/requirements.txt
           python --version
           sphinx-build --version
+          ford --version
 
       - name: Build Docs
         run: |
