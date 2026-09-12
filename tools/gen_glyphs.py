@@ -538,19 +538,39 @@ def block_offsets():
     return out
 
 
-def literal(text, width=129):
-    """The blob as one Fortran literal, continued inside the quotes.
+def literal(text, width=118, rows_per_chunk=100):
+    """The blob as an array of equal-length row parameters.
 
-    Each line ends with "&" and the next begins with one, so the newline
-    and the indentation are not part of the string. 129 payload characters
-    plus the two ampersands and the quote is the 132 column limit.
+    One long literal would be simplest, but ifx caps a single token at
+    7194 characters and a character named constant at 7198, so the blob
+    cannot be one parameter, however it is spelled. An array of short
+    rows has neither problem, and fplot_glyphs glues the rows back
+    together at run time, where no limit applies. BLOB_LEN is the true
+    length; the constructor blank-pads the last row to the common width.
+
+    The rows are declared in chunks which BLOB_ROWS then concatenates,
+    because a statement may carry only 255 continuation lines before
+    Fortran 2023 and there are more rows than that. 118 payload
+    characters plus quotes, comma and ampersand at an 8-column indent is
+    the 132 column limit.
     """
-    lines = [text[i:i + width] for i in range(0, len(text), width)]
-    out = ['    character(len=*), parameter :: BLOB = &']
-    for i, line in enumerate(lines):
-        head = '"' if i == 0 else "&"
-        tail = '"' if i == len(lines) - 1 else "&"
-        out.append(f"{head}{line}{tail}")
+    rows = [text[i:i + width] for i in range(0, len(text), width)]
+    chunks = [rows[i:i + rows_per_chunk]
+              for i in range(0, len(rows), rows_per_chunk)]
+    out = [f"    integer, parameter :: BLOB_LEN = {len(text)}"]
+    for k, chunk in enumerate(chunks):
+        out.append(f"    character(len={width}), parameter :: "
+                   f"BLOB_ROWS_{k + 1}({len(chunk)}) = "
+                   f"[character(len={width}) :: &")
+        for i, row in enumerate(chunk):
+            tail = "]" if i == len(chunk) - 1 else ", &"
+            out.append(f'        "{row}"{tail}')
+        out.append("")
+    out.append(f"    character(len={width}), parameter :: "
+               f"BLOB_ROWS({len(rows)}) = [ &")
+    for k in range(len(chunks)):
+        tail = "]" if k == len(chunks) - 1 else ", &"
+        out.append(f"        BLOB_ROWS_{k + 1}{tail}")
     return out
 
 
@@ -678,7 +698,10 @@ def main() -> None:
     L += literal(text)
     L += ["", "end module fplot_glyphs_data", ""]
 
-    OUT.write_text("\n".join(L))
+    # Spelled out rather than left to the platform, so that running this
+    # on Windows does not rewrite the file in the locale's encoding with
+    # CRLF endings and bury the real change in a whole-file diff.
+    OUT.write_text("\n".join(L), encoding="utf-8", newline="\n")
     print(
         f"wrote {OUT}: {len(outlines)} outlines, {npt} quadratic points, "
         f"{len(blob)} bytes, {len(text)} characters"

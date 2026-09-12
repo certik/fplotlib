@@ -54,7 +54,7 @@ module fplot_glyphs
     use fplot_style, only: dp
     use fplot_render, only: VERB_MOVE, VERB_LINE, VERB_CUBIC, VERB_CLOSE
     use fplot_glyphs_data, only: EM, ASCENT, DESCENT, XHEIGHT, &
-                                 ALPHABET, BLOB, &
+                                 ALPHABET, BLOB_ROWS, BLOB_LEN, &
                                  NCH, NFACE, NSLOT, NOUT, NCONT, NPT, &
                                  NBLK, BLK_FIRST, BLK_LAST, BLK_OFF
     implicit none
@@ -370,19 +370,28 @@ contains
     end subroutine unpack
 
     ! Five characters back into four bytes, most significant first.
+    ! The blob is stored as rows of equal length because ifx caps a
+    ! character named constant at 7198 characters; gluing them back
+    ! together at run time is not bound by that.
     subroutine from_base85()
-        integer :: val(0:127), i, j, k, n
+        integer :: val(0:127), i, j, k, n, r, w
         integer(int64) :: acc
+        character(len=:), allocatable :: blob
+        allocate (character(len=BLOB_LEN) :: blob)
+        w = len(BLOB_ROWS)
+        do r = 1, size(BLOB_ROWS)
+            blob((r - 1)*w + 1:min(r*w, BLOB_LEN)) = BLOB_ROWS(r)
+        end do
         val = -1
         do i = 1, len(ALPHABET)
             val(iachar(ALPHABET(i:i))) = i - 1
         end do
-        n = len(BLOB)/5
+        n = BLOB_LEN/5
         allocate (BUF(4*n))
         do k = 0, n - 1
             acc = 0
             do j = 1, 5
-                acc = acc*85 + int(val(iachar(BLOB(5*k + j:5*k + j))), int64)
+                acc = acc*85 + int(val(iachar(blob(5*k + j:5*k + j))), int64)
             end do
             do j = 1, 4
                 BUF(4*k + j) = int(ibits(acc, 8*(4 - j), 8))
