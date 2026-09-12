@@ -249,8 +249,11 @@ pixi run test-lfortran
 # fpm uses the committed reference hashes too
 fpm test
 
-# Refresh the committed hashes after intentionally changing plot output
+# Refresh the local platform/compiler profile after intentionally changing plot output
 python tests/update_reference_hashes.py
+
+# Refresh a specific CI profile explicitly
+FPLOT_HASH_PROFILE=linux-gfortran python tests/update_reference_hashes.py
 
 # Optional: compare against matplotlib references when auditing fidelity
 pixi run compare       # SVG, structurally
@@ -261,17 +264,21 @@ pixi run compare-gif   # GIF, frame by frame
 ```
 
 `fpm test` now generates all reference artifacts and verifies them against the
-committed hashes in `tests/reference_hashes.json`. When a plotting change is
-intentional, regenerate `tests/out` with `fpm test`, refresh the manifest with
-`python tests/update_reference_hashes.py`, and commit the updated JSON.
+committed hashes in `tests/reference_hashes.json`. That manifest is profile
+aware: each compiler/platform combination can carry its own accepted hashes.
+When a plotting change is intentional, regenerate `tests/out` with `fpm test`,
+refresh the matching profile with `python tests/update_reference_hashes.py`,
+and commit the updated JSON.
 
 The SVG comparison is structural because a viewer, not fplot, decides what an
 SVG looks like. PNG, PDF and EPS are compared as pixels, since there fplot
 decides.
 
-CI (Linux) runs `fpm test` across the compiler matrix, so hash verification is
-the main gate. The matplotlib comparison scripts remain available for deeper
-fidelity audits.
+CI (Linux) runs `fpm test` across the compiler matrix and selects a hash
+profile per compiler. `gfortran`, `lfortran` and `flang` are verified against
+committed profiles; `ifx` currently uploads a candidate manifest so its
+compiler-specific baseline can be reviewed and added intentionally. The
+matplotlib comparison scripts remain available for deeper fidelity audits.
 
 ## Layout
 
@@ -316,8 +323,9 @@ fplot is measured against matplotlib rather than described as similar to it:
 every feature has a case in `tests/test_plots.f90` and a matplotlib reference
 in `tests/gen_mpl_refs.py`. The committed hash manifest in
 `tests/reference_hashes.json` locks in the accepted native output for those
-cases, while the comparison scripts above still put a number on the remaining
-difference from matplotlib. As of this writing, over 100 cases:
+cases, with separate profiles where compilers render differently, while the
+comparison scripts above still put a number on the remaining difference from
+matplotlib. As of this writing, over 100 cases:
 
 | format | cases | mean difference |
 | --- | --- | --- |

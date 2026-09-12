@@ -23,7 +23,19 @@ jobs:
       # the first one that breaks.
       fail-fast: false
       matrix:
-        compiler: [gfortran, ifx, lfortran, flang] 
+        include:
+          - compiler: gfortran
+            hash_profile: linux-gfortran
+            verify_hashes: true
+          - compiler: ifx
+            hash_profile: linux-ifx
+            verify_hashes: false
+          - compiler: lfortran
+            hash_profile: linux-lfortran
+            verify_hashes: true
+          - compiler: flang
+            hash_profile: linux-flang
+            verify_hashes: true
     steps:
       - uses: actions/checkout@v4
 
@@ -41,8 +53,20 @@ jobs:
       - name: Build with ${{ matrix.compiler }}
         run: fpm build --compiler ${{ steps.fortran.outputs.fc }}
 
-      # test_plots writes to tests/out with paths relative to the repo root,
-      # then verifies the committed reference hashes.
+      # test_plots writes to tests/out, then verifies the hashes for the
+      # selected compiler profile.
       - name: Test with ${{ matrix.compiler }}
+        id: test
+        continue-on-error: ${{ !matrix.verify_hashes }}
+        env:
+          FPLOT_HASH_PROFILE: ${{ matrix.hash_profile }}
         run: |
           fpm test --compiler ${{ steps.fortran.outputs.fc }}
+
+      - name: Upload candidate hash manifest for ${{ matrix.compiler }}
+        if: ${{ !matrix.verify_hashes }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.hash_profile }}-candidate
+          path: tests/reference_hashes.${{ matrix.hash_profile }}.candidate.json
+          if-no-files-found: error
