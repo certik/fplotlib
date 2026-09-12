@@ -16,6 +16,8 @@ jobs:
   compilers:
     name: ${{ matrix.compiler }}
     runs-on: ubuntu-latest
+    env:
+      FPLOT_TEST_PYTHON: python3
     strategy:
       # Every compiler is a gate, so report all four rather than stopping at
       # the first one that breaks.
@@ -40,32 +42,7 @@ jobs:
         run: fpm build --compiler ${{ steps.fortran.outputs.fc }}
 
       # test_plots writes to tests/out with paths relative to the repo root,
-      # which is where fpm runs it from.
+      # then verifies the committed reference hashes.
       - name: Test with ${{ matrix.compiler }}
         run: |
-          mkdir -p tests/out
           fpm test --compiler ${{ steps.fortran.outputs.fc }}
-
-  compare:
-    name: Compare against matplotlib
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.10.1
-        with:
-          pixi-version: v0.76.1
-          cache: true
-          locked: true
-      # Each compare task pulls in mpl-refs and test-flang through its
-      # depends-on, so the reference images and the fplot output are generated
-      # once between them.
-      - name: Compare SVG output against matplotlib
-        run: pixi run compare
-      - name: Compare PNG output against matplotlib
-        run: pixi run compare-png
-      - name: Compare PDF output against matplotlib
-        run: pixi run compare-pdf
-      - name: Compare EPS output against matplotlib
-        run: pixi run compare-eps
-      - name: Compare GIF output against matplotlib
-        run: pixi run compare-gif

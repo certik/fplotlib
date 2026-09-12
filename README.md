@@ -246,7 +246,13 @@ pixi run demo-flang
 pixi run build-lfortran
 pixi run test-lfortran
 
-# Compare against matplotlib references
+# fpm uses the committed reference hashes too
+fpm test
+
+# Refresh the committed hashes after intentionally changing plot output
+python tests/update_reference_hashes.py
+
+# Optional: compare against matplotlib references when auditing fidelity
 pixi run compare       # SVG, structurally
 pixi run compare-png   # PNG, pixel by pixel
 pixi run compare-pdf   # PDF, rasterized by pdftoppm
@@ -254,12 +260,18 @@ pixi run compare-eps   # EPS, rasterized by ghostscript
 pixi run compare-gif   # GIF, frame by frame
 ```
 
+`fpm test` now generates all reference artifacts and verifies them against the
+committed hashes in `tests/reference_hashes.json`. When a plotting change is
+intentional, regenerate `tests/out` with `fpm test`, refresh the manifest with
+`python tests/update_reference_hashes.py`, and commit the updated JSON.
+
 The SVG comparison is structural because a viewer, not fplot, decides what an
 SVG looks like. PNG, PDF and EPS are compared as pixels, since there fplot
 decides.
 
-CI (Linux) runs `pixi run test-flang` and `pixi run test-lfortran`, then all
-five comparisons.
+CI (Linux) runs `fpm test` across the compiler matrix, so hash verification is
+the main gate. The matplotlib comparison scripts remain available for deeper
+fidelity audits.
 
 ## Layout
 
@@ -270,7 +282,7 @@ src/           library modules
                fplot_draw.f90    layout, axes decoration, one renderer per plot type
                fplot.f90         the plotting API
 examples/      demo.f90
-tests/         Fortran test plots, matplotlib refs, compare scripts
+tests/         Fortran test plots, hash manifest, matplotlib refs, compare scripts
 scripts/       build_flang.sh, build_lfortran.sh
 ```
 
@@ -302,8 +314,10 @@ call display_data("image/svg+xml", render_svg())
 
 fplot is measured against matplotlib rather than described as similar to it:
 every feature has a case in `tests/test_plots.f90` and a matplotlib reference
-in `tests/gen_mpl_refs.py`, and the comparisons above put a number on the
-difference. As of this writing, over 100 cases:
+in `tests/gen_mpl_refs.py`. The committed hash manifest in
+`tests/reference_hashes.json` locks in the accepted native output for those
+cases, while the comparison scripts above still put a number on the remaining
+difference from matplotlib. As of this writing, over 100 cases:
 
 | format | cases | mean difference |
 | --- | --- | --- |
