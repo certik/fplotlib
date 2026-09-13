@@ -1,5 +1,6 @@
 program test_plots
     use fplot
+    use test_fingerprint, only: fp_check_png, fp_check_gif, fp_finish
     implicit none
     integer :: fig1
     type(axes), allocatable :: axs(:, :)
@@ -82,6 +83,10 @@ program test_plots
     real(dp) :: stx(nst), sty(3, nst)
     character(len=4), parameter :: stlab(3) = ["low ", "mid ", "high"]
     real(dp), parameter :: pi = 3.14159265358979323846_dp
+
+    ! Everything is written under tests/out, relative to the project root,
+    ! which is where fpm test and the pixi tasks run this program from.
+    call execute_command_line("mkdir -p tests/out")
 
     ! Shared data
     do i = 1, n
@@ -1510,9 +1515,14 @@ program test_plots
         call add_frame()
     end do
     call save_animation("tests/out/anim_sine.gif", fps=10.0_dp)
+    call fp_check_gif("anim_sine", "tests/out/anim_sine.gif")
     print *, "wrote tests/out/anim_sine.gif"
 
     print *, "All test plots written."
+
+    ! Every PNG and GIF frame against its stored fingerprint; see
+    ! test_fingerprint.f90. Stops with a failure if any picture changed.
+    call fp_finish("tests/fingerprints.txt")
 
 contains
 
@@ -1541,6 +1551,7 @@ contains
                      bbox_inches=bbox_inches, dpi=dpi)
         call savefig("tests/out/"//stem//".png", facecolor=facecolor, &
                      bbox_inches=bbox_inches, dpi=dpi)
+        call fp_check_png(stem, "tests/out/"//stem//".png")
         call savefig("tests/out/"//stem//".eps", facecolor=facecolor, &
                      bbox_inches=bbox_inches, dpi=dpi)
         print *, "wrote tests/out/"//stem//".svg, .pdf, .png and .eps"
