@@ -2198,7 +2198,11 @@ contains
                 d = abs(dxs*(py(j) - py(ja)) - dys*(px(j) - px(ja)))/sqrt(len2)
                 dev = max(dev, d)
             end do
-            if (dev < bdev) then
+            ! A later window has to be straighter by more than rounding: on a
+            ! straight run every window has deviation 0 up to 1e-14, and
+            ! letting that noise pick the winner puts the label somewhere
+            ! else with every compiler.
+            if (dev < bdev - 1.0e-6_dp) then
                 bdev = dev
                 i0 = ja
                 i1 = jb
