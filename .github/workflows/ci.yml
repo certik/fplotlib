@@ -25,8 +25,12 @@ jobs:
           locked: true
       - name: Test with Flang
         run: pixi run test-flang
-      - name: Test with LFortran
-        run: pixi run test-lfortran
+      # Disabled until https://github.com/lfortran/lfortran/issues/12788 is
+      # fixed: LFortran reads a constant substring of a character component
+      # from its default initializer, so legend_labels draws a hidden entry
+      # and fails its fingerprint.
+      # - name: Test with LFortran
+      #   run: pixi run test-lfortran
       - name: Build as an fpm package
         run: pixi run fpm-flang && pixi run fpm-lfortran
       - name: Compare against matplotlib references
