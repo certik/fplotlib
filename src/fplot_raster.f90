@@ -288,9 +288,13 @@ contains
 
         sv = 0.0_dp
         if (modulo(nint(line_width_px), 2) == 1) sv = 0.5_dp
+        ! A coordinate meant to be exactly x.5 arrives as x.5 plus or minus
+        ! 1e-13, and floor(x + 0.5) then picks either pixel depending on the
+        ! compiler. Rounding to 1/65536 px first (exact in binary) makes it
+        ! x.5 again, and every build snaps it the same way.
         do i = 1, pb%n
-            pb%x(i) = floor(pb%x(i) + 0.5_dp) + sv
-            pb%y(i) = floor(pb%y(i) + 0.5_dp) + sv
+            pb%x(i) = floor(anint(pb%x(i)*65536.0_dp)/65536.0_dp + 0.5_dp) + sv
+            pb%y(i) = floor(anint(pb%y(i)*65536.0_dp)/65536.0_dp + 0.5_dp) + sv
         end do
     end subroutine pb_snap
 

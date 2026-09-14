@@ -283,6 +283,10 @@ matplotlib comparisons below), then store the new fingerprints:
 fpm test -- --update
 ```
 
+CI also runs the tests built with `-O3 -march=native` (`pixi run
+test-flang-O3`), where fused multiply-add changes the rounding, so a picture
+that depends on the last bits of a floating point value fails there.
+
 The fingerprints cover the raster output. SVG, PDF and EPS are written by the
 same layout and drawing code but checked only by the comparisons below.
 

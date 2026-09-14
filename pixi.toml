@@ -9,6 +9,9 @@ version = "0.1.0"
 build-flang = "bash scripts/build_flang.sh"
 # Run binaries from repo root so relative paths like tests/out/*.svg resolve.
 test-flang = "bash scripts/build_flang.sh && mkdir -p tests/out && ./build/flang/test_plots"
+# The same tests optimized, with fused multiply-add allowed: rounding then
+# differs from the plain build, and the pictures must not.
+test-flang-O3 = "fpm test --compiler flang --flag '-O3 -march=native'"
 demo-flang = "bash scripts/build_flang.sh && ./build/flang/demo"
 
 # fpm is how another project depends on fplot, so build it that way too.

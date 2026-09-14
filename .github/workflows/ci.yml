@@ -26,6 +26,8 @@ jobs:
           environments: default lfortran
       - name: Test with Flang
         run: pixi run test-flang
+      - name: Test with Flang -O3 (fused multiply-add)
+        run: pixi run test-flang-O3
       - name: Test with LFortran
         run: pixi run test-lfortran
       - name: Build as an fpm package
