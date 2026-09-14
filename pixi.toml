@@ -5,43 +5,47 @@ name = "fplot"
 platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
-[tasks]
-build-flang = "bash scripts/build_flang.sh"
-# Run binaries from repo root so relative paths like tests/out/*.svg resolve.
-test-flang = "bash scripts/build_flang.sh && mkdir -p tests/out && ./build/flang/test_plots"
-# The same tests optimized, with fused multiply-add allowed: rounding then
-# differs from the plain build, and the pictures must not.
-test-flang-O3 = "fpm test --compiler flang --flag '-O3 -march=native'"
-demo-flang = "bash scripts/build_flang.sh && ./build/flang/demo"
-
-# fpm is how another project depends on fplot, so build it that way too.
-fpm-flang = "fpm build --compiler flang"
-
-mpl-refs = "python tests/gen_mpl_refs.py"
-
-# The five comparisons share their setup, so it is expressed once as a
-# dependency rather than repeated in each command and run five times.
-[tasks.compare]
-cmd = "python tests/compare_svgs.py"
-depends-on = ["mpl-refs", "test-flang"]
-
-[tasks.compare-png]
-cmd = "python tests/compare_pngs.py"
-depends-on = ["mpl-refs", "test-flang"]
-
-[tasks.compare-pdf]
-cmd = "python tests/compare_pdfs.py"
-depends-on = ["mpl-refs", "test-flang"]
-
-[tasks.compare-eps]
-cmd = "python tests/compare_eps.py"
-depends-on = ["mpl-refs", "test-flang"]
-
-[tasks.compare-gif]
-cmd = "python tests/compare_gif.py"
-depends-on = ["mpl-refs", "test-flang"]
+# One environment per compiler, holding nothing but the compiler and fpm, so
+# the tests need no Python; the matplotlib comparison has an environment of
+# its own. Every task is defined in exactly one environment, so
+# `pixi run test-lfortran` picks the lfortran environment without being told,
+# and installs it the first time.
 
 [dependencies]
+fpm = ">=0.13.0,<0.14"
+
+[feature.gfortran.dependencies]
+gfortran = ">=16,<17"
+
+[feature.gfortran.tasks]
+test-gfortran = "fpm test --compiler gfortran"
+# -O3 with fused multiply-add allowed: the rounding then differs from the
+# plain build, and the pictures must not.
+test-gfortran-O3 = "fpm test --compiler gfortran --flag '-O3 -march=native'"
+demo-gfortran = "fpm run --example demo --compiler gfortran"
+
+# conda-forge has flang for Linux only; on macOS provide a system flang on
+# PATH. The compiler is a feature of its own because the matplotlib
+# environment needs it as well, while the tasks belong to the flang
+# environment alone.
+[feature.flang.target.linux-64.dependencies]
+flang_linux-64 = ">=22,<23"
+
+[feature.flang-tasks.tasks]
+test-flang = "fpm test --compiler flang"
+test-flang-O3 = "fpm test --compiler flang --flag '-O3 -march=native'"
+demo-flang = "fpm run --example demo --compiler flang"
+
+# LFortran cannot share an environment with flang: conda-forge builds it
+# against clang 21 and flang against clang 22.
+[feature.lfortran.dependencies]
+lfortran = ">=0.66.0,<0.67"
+
+[feature.lfortran.tasks]
+test-lfortran = "fpm test --compiler lfortran"
+demo-lfortran = "fpm run --example demo --compiler lfortran"
+
+[feature.matplotlib.dependencies]
 python = ">=3.14.6,<3.15"
 matplotlib = ">=3.11.1,<4"
 numpy = ">=2.5.1,<3"
@@ -51,24 +55,46 @@ pillow = ">=12.3.0,<13"
 poppler = "*"
 # gs, for rasterizing EPS in tests/compare_eps.py
 ghostscript = ">=10.4.0,<11"
-fpm = ">=0.13.0,<0.14"
 
-# flang and LFortran live in separate environments: conda-forge builds
-# LFortran against clang 21 and flang against clang 22, which cannot be
-# installed side by side. `pixi run test-lfortran` picks the lfortran
-# environment by itself, since its tasks are defined only there.
-[feature.flang.target.linux-64.dependencies]
-flang_linux-64 = ">=22,<23"
+# The comparisons read the matplotlib references from tests/refs and the
+# flang build's pictures from tests/out. Both are made once: the inputs and
+# outputs let pixi skip them when nothing they depend on has changed, so the
+# five comparisons, run one after another, share one build.
+[feature.matplotlib.tasks.mpl-refs]
+cmd = "python tests/gen_mpl_refs.py"
+inputs = ["tests/gen_mpl_refs.py"]
+outputs = ["tests/refs/*"]
 
-[feature.lfortran.dependencies]
-lfortran = ">=0.66.0,<0.67"
+[feature.matplotlib.tasks.test-outputs]
+cmd = "fpm test --compiler flang"
+inputs = ["fpm.toml", "src/*.f90", "tests/*.f90", "tests/fingerprints.txt"]
+outputs = ["tests/out/*"]
 
-[feature.lfortran.tasks]
-build-lfortran = "bash scripts/build_lfortran.sh"
-test-lfortran = "bash scripts/build_lfortran.sh && mkdir -p tests/out && ./build/lfortran/test_plots"
-demo-lfortran = "bash scripts/build_lfortran.sh && ./build/lfortran/demo"
-fpm-lfortran = "fpm build --compiler lfortran"
+[feature.matplotlib.tasks.compare]
+cmd = "python tests/compare_svgs.py"
+depends-on = ["mpl-refs", "test-outputs"]
+
+[feature.matplotlib.tasks.compare-png]
+cmd = "python tests/compare_pngs.py"
+depends-on = ["mpl-refs", "test-outputs"]
+
+[feature.matplotlib.tasks.compare-pdf]
+cmd = "python tests/compare_pdfs.py"
+depends-on = ["mpl-refs", "test-outputs"]
+
+[feature.matplotlib.tasks.compare-eps]
+cmd = "python tests/compare_eps.py"
+depends-on = ["mpl-refs", "test-outputs"]
+
+[feature.matplotlib.tasks.compare-gif]
+cmd = "python tests/compare_gif.py"
+depends-on = ["mpl-refs", "test-outputs"]
+
+[feature.matplotlib.tasks.compare-all]
+depends-on = ["compare", "compare-png", "compare-pdf", "compare-eps", "compare-gif"]
 
 [environments]
-default = ["flang"]
+gfortran = ["gfortran"]
+flang = ["flang", "flang-tasks"]
 lfortran = ["lfortran"]
+matplotlib = ["flang", "matplotlib"]
