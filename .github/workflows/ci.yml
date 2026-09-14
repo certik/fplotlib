@@ -13,8 +13,11 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Linux (flang + lfortran)
+  # One job per compiler, each with nothing installed but that compiler and
+  # fpm. `fpm test` builds the package, writes every test plot and checks it
+  # against tests/fingerprints.txt.
+  gfortran:
+    name: GFortran
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,19 +26,98 @@ jobs:
           pixi-version: v0.76.1
           cache: true
           locked: true
-      - name: Test with Flang
+          environments: gfortran
+      - name: Test
+        run: pixi run test-gfortran
+      - name: Test with -O3 -march=native
+        run: pixi run test-gfortran-O3
+      - name: Demo
+        run: pixi run demo-gfortran
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-gfortran
+          path: tests/out/
+
+  flang:
+    name: Flang
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.10.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+          locked: true
+          environments: flang
+      - name: Test
         run: pixi run test-flang
-      - name: Test with LFortran
+      - name: Test with -O3 -march=native
+        run: pixi run test-flang-O3
+      - name: Demo
+        run: pixi run demo-flang
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-flang
+          path: tests/out/
+
+  lfortran:
+    name: LFortran
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.10.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+          locked: true
+          environments: lfortran
+      - name: Test
         run: pixi run test-lfortran
-      - name: Build as an fpm package
-        run: pixi run fpm-flang && pixi run fpm-lfortran
-      - name: Compare against matplotlib references
+      - name: Demo
+        run: pixi run demo-lfortran
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-lfortran
+          path: tests/out/
+
+  # The pictures of the flang build against matplotlib's. The first step makes
+  # the references and the pictures; the comparisons after it reuse both.
+  matplotlib:
+    name: Matplotlib comparison (Flang)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.10.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+          locked: true
+          environments: matplotlib
+      - name: Matplotlib references and flang pictures
+        run: pixi run mpl-refs && pixi run test-outputs
+      - name: Compare SVG
         run: pixi run compare
-      - name: Compare PNG output against matplotlib
+      - name: Compare PNG
         run: pixi run compare-png
-      - name: Compare PDF output against matplotlib
+      - name: Compare PDF
         run: pixi run compare-pdf
-      - name: Compare EPS output against matplotlib
+      - name: Compare EPS
         run: pixi run compare-eps
-      - name: Compare GIF output against matplotlib
+      - name: Compare GIF
         run: pixi run compare-gif
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-matplotlib
+          path: tests/out/

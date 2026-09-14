@@ -414,19 +414,26 @@ contains
         integer, intent(out) :: n
         character(len=32) :: tmp
         character(len=16) :: fmt
-        real(dp) :: av
+        real(dp) :: av, vv
         integer :: i
 
-        av = abs(v)
+        ! matplotlib's ScalarFormatter writes anything within 1e-8 of zero as
+        ! zero. The locator makes a tick as i*step + base, which for the tick
+        ! meant to be at 0 is exactly 0 on one build and 1e-17 on another;
+        ! without this the second falls to the power-of-ten branch and reads
+        ! "0" where the rest of the axis reads "0.0".
+        vv = v
+        if (abs(vv) < 1.0e-8_dp) vv = 0.0_dp
+        av = abs(vv)
         if (dec < 0 .or. (av > 0.0_dp .and. (av >= 1.0e4_dp .or. av < 1.0e-3_dp))) then
-            call format_tick_to(v, .false., s, n)
+            call format_tick_to(vv, .false., s, n)
             return
         end if
         if (dec == 0) then
-            write (tmp, "(I0)") nint(v)
+            write (tmp, "(I0)") nint(vv)
         else
             write (fmt, "(A,I0,A)") "(F24.", dec, ")"
-            write (tmp, fmt) v
+            write (tmp, fmt) vv
         end if
         tmp = adjustl(tmp)
         n = len_trim(tmp)

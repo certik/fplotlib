@@ -218,35 +218,34 @@ fplot = { git = "https://github.com/certik/fplot" }
 ```
 
 and then `use fplot` and call `plot`, `title`, `savefig` as the examples below
-do. It builds with both flang and LFortran:
+do. It builds with gfortran, flang and LFortran:
 
 ```bash
+fpm build --compiler gfortran
 fpm build --compiler flang
 fpm build --compiler lfortran
 ```
 
-The pixi tasks below are for developing fplot itself, where the build scripts
-give finer control over compile and link order.
+The pixi tasks below are for developing fplot itself, with pinned compilers.
 
 ## Build
 
-Requires [pixi](https://pixi.sh). LFortran is installed by pixi on all platforms.
-Flang is installed by pixi on Linux via conda-forge `flang_linux-64` (compiler
-plus `libflang-rt`); on macOS provide a system Flang on `PATH`.
+Requires [pixi](https://pixi.sh). Every compiler has its own environment with
+nothing in it but the compiler and fpm: gfortran and LFortran come from
+conda-forge on Linux and macOS, flang on Linux (on macOS provide a system
+flang on `PATH`). A task installs its environment the first time it runs.
 
 ```bash
-pixi install
-
-# Flang (development)
-pixi run build-flang
+pixi run test-gfortran       # fpm test --compiler gfortran
+pixi run test-gfortran-O3    # the same, built with -O3 -march=native
 pixi run test-flang
-pixi run demo-flang
-
-# LFortran
-pixi run build-lfortran
+pixi run test-flang-O3
 pixi run test-lfortran
+pixi run demo-flang          # fpm run --example demo, writes demo.svg
 
-# Compare against matplotlib references
+# Compare the flang build against matplotlib references (needs Python,
+# which lives in its own environment)
+pixi run compare-all   # all five below, sharing one build
 pixi run compare       # SVG, structurally
 pixi run compare-png   # PNG, pixel by pixel
 pixi run compare-pdf   # PDF, rasterized by pdftoppm
@@ -254,12 +253,51 @@ pixi run compare-eps   # EPS, rasterized by ghostscript
 pixi run compare-gif   # GIF, frame by frame
 ```
 
+## Tests
+
+`fpm test` (or `pixi run test-gfortran`, `test-flang`, `test-lfortran`) writes every
+test plot to `tests/out/` and checks each PNG, and each frame of the GIF,
+against a stored fingerprint in `tests/fingerprints.txt`. It needs nothing
+outside the repository: no Python and no reference images.
+
+A fingerprint is 4096 bits, 64 words of 64 bits, one word per tile of the
+image, computed with integer arithmetic only (`tests/test_fingerprint.f90`).
+Two builds of the same picture differ in a few bits per word, because
+compilers round some antialiased edge pixels one level differently; a moved,
+missing or recoloured element changes about half the bits of its tile's word.
+A case fails when any word differs by more than 10 bits, and the report says
+where in the image:
+
+```
+  FAIL clabel: 36 bits differ near x=80..160, y=120..180 (limit 10)
+```
+
+Measured on this suite, a tick moved by 1 px, a changed tick label or a one
+letter typo in a title changes a word by 18 to 40 bits, while a tick moved by
+0.25 px or less passes. What the fingerprint cannot tell is whether a change
+is right, so after an intended change look at the new pictures (and run the
+matplotlib comparisons below), then store the new fingerprints:
+
+```bash
+fpm test -- --update
+```
+
+CI also runs the gfortran and flang tests built with `-O3 -march=native`
+(`pixi run test-gfortran-O3`, `test-flang-O3`), where fused multiply-add
+changes the rounding, so a picture that depends on the last bits of a
+floating point value fails there.
+
+The fingerprints cover the raster output. SVG, PDF and EPS are written by the
+same layout and drawing code but checked only by the comparisons below.
+
 The SVG comparison is structural because a viewer, not fplot, decides what an
 SVG looks like. PNG, PDF and EPS are compared as pixels, since there fplot
 decides.
 
-CI (Linux) runs `pixi run test-flang` and `pixi run test-lfortran`, then all
-five comparisons.
+CI (Linux) has one job per compiler, each with only that compiler and fpm
+installed: gfortran and flang are tested plain and with `-O3 -march=native`,
+LFortran plain, and each job also builds and runs the demo. A separate job
+compares the flang build against matplotlib.
 
 ## Layout
 
@@ -270,8 +308,7 @@ src/           library modules
                fplot_draw.f90    layout, axes decoration, one renderer per plot type
                fplot.f90         the plotting API
 examples/      demo.f90
-tests/         Fortran test plots, matplotlib refs, compare scripts
-scripts/       build_flang.sh, build_lfortran.sh
+tests/         Fortran test plots, fingerprints, matplotlib refs, compare scripts
 ```
 
 ## License
