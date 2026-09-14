@@ -33,6 +33,13 @@ jobs:
         run: pixi run test-gfortran-O3
       - name: Demo
         run: pixi run demo-gfortran
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-gfortran
+          path: tests/out/
 
   flang:
     name: Flang
@@ -51,6 +58,13 @@ jobs:
         run: pixi run test-flang-O3
       - name: Demo
         run: pixi run demo-flang
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-flang
+          path: tests/out/
 
   lfortran:
     name: LFortran
@@ -67,6 +81,13 @@ jobs:
         run: pixi run test-lfortran
       - name: Demo
         run: pixi run demo-lfortran
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-lfortran
+          path: tests/out/
 
   # The pictures of the flang build against matplotlib's. The first step makes
   # the references and the pictures; the comparisons after it reuse both.
@@ -93,3 +114,10 @@ jobs:
         run: pixi run compare-eps
       - name: Compare GIF
         run: pixi run compare-gif
+      # The pictures, to look at when a fingerprint or a comparison fails.
+      - name: Upload the test pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-out-matplotlib
+          path: tests/out/

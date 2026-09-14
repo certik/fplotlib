@@ -5064,6 +5064,11 @@ contains
             do i = 1, nb + 1
                 edges(i) = lo + real(i - 1, dp) * w
             end do
+            ! The last edge is the largest sample itself, as numpy's linspace
+            ! makes it. lo + nb*w can come out one ulp below hi (fused
+            ! multiply-add gives a different rounding), and then the largest
+            ! sample falls outside every bin.
+            edges(nb + 1) = hi
         end if
 
         allocate (centers(nb), counts(nb), widths(nb))
