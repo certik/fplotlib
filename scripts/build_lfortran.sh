@@ -38,9 +38,12 @@ $LFORTRAN -c "$ROOT/src/fplot_proj3d.f90"
 $LFORTRAN -c "$ROOT/src/fplot_draw.f90"
 $LFORTRAN -c "$ROOT/src/fplot.f90"
 
+$LFORTRAN -c "$ROOT/tests/test_image_io.f90"
+$LFORTRAN -c "$ROOT/tests/test_fingerprint.f90"
+
 $LFORTRAN -o "$BUILD/test_plots" \
     "$ROOT/tests/test_plots.f90" \
-    fplot_colors.o fplot_style.o fplot_render.o fplot_scale.o fplot_cmap.o fplot_ticks.o fplot_contour.o fplot_tri.o fplot_svg.o fplot_backend_svg.o fplot_backend_pdf.o fplot_backend_eps.o fplot_glyphs_data.o fplot_glyphs.o fplot_png.o fplot_textpath.o fplot_raster.o fplot_backend_png.o fplot_gif.o fplot_proj3d.o fplot_mathtext.o fplot_dates.o fplot_state.o fplot_artist.o fplot_draw.o fplot.o
+    test_image_io.o test_fingerprint.o fplot_colors.o fplot_style.o fplot_render.o fplot_scale.o fplot_cmap.o fplot_ticks.o fplot_contour.o fplot_tri.o fplot_svg.o fplot_backend_svg.o fplot_backend_pdf.o fplot_backend_eps.o fplot_glyphs_data.o fplot_glyphs.o fplot_png.o fplot_textpath.o fplot_raster.o fplot_backend_png.o fplot_gif.o fplot_proj3d.o fplot_mathtext.o fplot_dates.o fplot_state.o fplot_artist.o fplot_draw.o fplot.o
 
 $LFORTRAN -o "$BUILD/demo" \
     "$ROOT/examples/demo.f90" \

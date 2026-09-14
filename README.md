@@ -254,12 +254,44 @@ pixi run compare-eps   # EPS, rasterized by ghostscript
 pixi run compare-gif   # GIF, frame by frame
 ```
 
+## Tests
+
+`fpm test` (or `pixi run test-flang` / `pixi run test-lfortran`) writes every
+test plot to `tests/out/` and checks each PNG, and each frame of the GIF,
+against a stored fingerprint in `tests/fingerprints.txt`. It needs nothing
+outside the repository: no Python and no reference images.
+
+A fingerprint is 4096 bits, 64 words of 64 bits, one word per tile of the
+image, computed with integer arithmetic only (`tests/test_fingerprint.f90`).
+Two builds of the same picture differ in a few bits per word, because
+compilers round some antialiased edge pixels one level differently; a moved,
+missing or recoloured element changes about half the bits of its tile's word.
+A case fails when any word differs by more than 10 bits, and the report says
+where in the image:
+
+```
+  FAIL clabel: 36 bits differ near x=80..160, y=120..180 (limit 10)
+```
+
+Measured on this suite, a tick moved by 1 px, a changed tick label or a one
+letter typo in a title changes a word by 18 to 40 bits, while a tick moved by
+0.25 px or less passes. What the fingerprint cannot tell is whether a change
+is right, so after an intended change look at the new pictures (and run the
+matplotlib comparisons below), then store the new fingerprints:
+
+```bash
+fpm test -- --update
+```
+
+The fingerprints cover the raster output. SVG, PDF and EPS are written by the
+same layout and drawing code but checked only by the comparisons below.
+
 The SVG comparison is structural because a viewer, not fplot, decides what an
 SVG looks like. PNG, PDF and EPS are compared as pixels, since there fplot
 decides.
 
-CI (Linux) runs `pixi run test-flang` and `pixi run test-lfortran`, then all
-five comparisons.
+CI (Linux) runs `pixi run test-flang` and `pixi run test-lfortran`, which
+include the fingerprint check, then all five comparisons.
 
 ## Layout
 
@@ -270,7 +302,7 @@ src/           library modules
                fplot_draw.f90    layout, axes decoration, one renderer per plot type
                fplot.f90         the plotting API
 examples/      demo.f90
-tests/         Fortran test plots, matplotlib refs, compare scripts
+tests/         Fortran test plots, fingerprints, matplotlib refs, compare scripts
 scripts/       build_flang.sh, build_lfortran.sh
 ```
 

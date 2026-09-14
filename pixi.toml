@@ -11,13 +11,8 @@ build-flang = "bash scripts/build_flang.sh"
 test-flang = "bash scripts/build_flang.sh && mkdir -p tests/out && ./build/flang/test_plots"
 demo-flang = "bash scripts/build_flang.sh && ./build/flang/demo"
 
-build-lfortran = "bash scripts/build_lfortran.sh"
-test-lfortran = "bash scripts/build_lfortran.sh && mkdir -p tests/out && ./build/lfortran/test_plots"
-demo-lfortran = "bash scripts/build_lfortran.sh && ./build/lfortran/demo"
-
 # fpm is how another project depends on fplot, so build it that way too.
 fpm-flang = "fpm build --compiler flang"
-fpm-lfortran = "fpm build --compiler lfortran"
 
 mpl-refs = "python tests/gen_mpl_refs.py"
 
@@ -51,10 +46,26 @@ cairosvg = ">=2.9.0,<3"
 pillow = ">=12.3.0,<13"
 # pdftoppm, for rasterizing PDFs in tests/compare_pdfs.py
 poppler = "*"
-lfortran = ">=0.64.0,<0.65"
 # gs, for rasterizing EPS in tests/compare_eps.py
 ghostscript = ">=10.4.0,<11"
 fpm = ">=0.13.0,<0.14"
 
-[target.linux-64.dependencies]
+# flang and LFortran live in separate environments: conda-forge builds
+# LFortran against clang 21 and flang against clang 22, which cannot be
+# installed side by side. `pixi run test-lfortran` picks the lfortran
+# environment by itself, since its tasks are defined only there.
+[feature.flang.target.linux-64.dependencies]
 flang_linux-64 = ">=22,<23"
+
+[feature.lfortran.dependencies]
+lfortran = ">=0.66.0,<0.67"
+
+[feature.lfortran.tasks]
+build-lfortran = "bash scripts/build_lfortran.sh"
+test-lfortran = "bash scripts/build_lfortran.sh && mkdir -p tests/out && ./build/lfortran/test_plots"
+demo-lfortran = "bash scripts/build_lfortran.sh && ./build/lfortran/demo"
+fpm-lfortran = "fpm build --compiler lfortran"
+
+[environments]
+default = ["flang"]
+lfortran = ["lfortran"]
