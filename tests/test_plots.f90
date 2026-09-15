@@ -88,9 +88,14 @@ program test_plots
     ! which is where fpm test and the pixi tasks run this program from.
     call execute_command_line("mkdir -p tests/out")
 
-    ! Shared data
+    ! Shared data. The division is parenthesised so the last point is 2*pi
+    ! exactly, the way numpy's linspace makes it. Left to associate, the
+    ! last point is 2*pi*99/99, one ulp above 2*pi, and sin of that is
+    ! +6e-16 instead of -2e-16: it falls on the other side of the where
+    ! test in fill_where. Which of the two a compiler produces then depends
+    ! on whether it reassociates, and ifx does by default.
     do i = 1, n
-        x(i) = 2.0_dp * pi * real(i - 1, dp) / real(n - 1, dp)
+        x(i) = 2.0_dp * pi * (real(i - 1, dp) / real(n - 1, dp))
         y(i) = sin(x(i))
         y2(i) = cos(x(i))
         y3(i) = 0.5_dp * sin(2.0_dp * x(i))
@@ -791,7 +796,8 @@ program test_plots
     ! 65) a polar plot
     call clf()
     do i = 1, n
-        td(i) = 2.0_dp*pi*real(i - 1, dp)/real(n - 1, dp)
+        ! parenthesised as for x above, to land on 2*pi exactly
+        td(i) = 2.0_dp*pi*(real(i - 1, dp)/real(n - 1, dp))
         yd(i) = 1.0_dp + cos(td(i))
     end do
     call polar(td(1:n), yd(1:n))
