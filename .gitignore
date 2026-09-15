@@ -3,7 +3,7 @@
 !.pixi/config.toml
 
 # build artifacts
-build/
+*build/
 *.mod
 *.o
 *.a
