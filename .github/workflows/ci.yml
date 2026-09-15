@@ -16,81 +16,82 @@ jobs:
   # One job per compiler, each with nothing installed but that compiler and
   # fpm. `fpm test` builds the package, writes every test plot and checks it
   # against tests/fingerprints.txt.
-  gfortran:
-    name: GFortran
+  #
+  # The compilers come from setup-fortran rather than from pixi, so each is
+  # the latest the action offers rather than the latest conda-forge has. The
+  # pixi environments stay for building the same thing by hand.
+  test:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      # Every compiler is a gate, so report all four instead of stopping at
+      # the first one that breaks.
+      fail-fast: false
+      matrix:
+        include:
+          # opt is a second run with fused multiply-add allowed: the rounding
+          # then differs from the plain build, and the pictures must not.
+          - name: GFortran
+            compiler: gfortran
+            args: ""
+            opt: "--flag '-O3 -march=native'"
+          - name: Flang
+            compiler: flang
+            args: ""
+            opt: "--flag '-O3 -march=native'"
+          # ifx reassociates by default, which is more than -O3 asks of the
+          # others: it turns a linspace into a running sum, so the last point
+          # of 2*pi*i/(n-1) and the exactly-zero column of a contour grid move
+          # by a few ulps and a sign test lands the other way.
+          # -fp-model precise holds it to the same standard as the rest; that
+          # is the spelling fpm itself uses for Intel on Unix (/fp:precise on
+          # Windows).
+          # Note that --flag replaces fpm's profile flags rather than adding
+          # to them, so the optimisation level is spelled out here.
+          - name: ifx
+            compiler: ifx
+            args: "--flag '-O2 -fp-model precise'"
+            opt: "--flag '-O3 -march=native -fp-model precise'"
+          - name: LFortran
+            compiler: lfortran
+            args: ""
+            opt: ""
     steps:
       - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.10.1
-        with:
-          pixi-version: v0.76.1
-          cache: true
-          locked: true
-          environments: gfortran
-      - name: Test
-        run: pixi run test-gfortran
-      - name: Test with -O3 -march=native
-        run: pixi run test-gfortran-O3
-      - name: Demo
-        run: pixi run demo-gfortran
-      # The pictures, to look at when a fingerprint or a comparison fails.
-      - name: Upload the test pictures
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tests-out-gfortran
-          path: tests/out/
 
-  flang:
-    name: Flang
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.10.1
+      - name: Set up ${{ matrix.compiler }}
+        id: fortran
+        uses: fortran-lang/setup-fortran@v2.0.0-beta.9
         with:
-          pixi-version: v0.76.1
-          cache: true
-          locked: true
-          environments: flang
-      - name: Test
-        run: pixi run test-flang
-      - name: Test with -O3 -march=native
-        run: pixi run test-flang-O3
-      - name: Demo
-        run: pixi run demo-flang
-      # The pictures, to look at when a fingerprint or a comparison fails.
-      - name: Upload the test pictures
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tests-out-flang
-          path: tests/out/
+          compiler: ${{ matrix.compiler }}
+          version: latest
 
-  lfortran:
-    name: LFortran
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.10.1
+      - uses: fortran-lang/setup-fpm@v10
         with:
-          pixi-version: v0.76.1
-          cache: true
-          locked: true
-          environments: lfortran
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Test
-        run: pixi run test-lfortran
+        run: fpm test --compiler ${{ steps.fortran.outputs.fc }} ${{ matrix.args }}
+
+      - name: Test with -O3 -march=native
+        if: matrix.opt
+        run: fpm test --compiler ${{ steps.fortran.outputs.fc }} ${{ matrix.opt }}
+
+      # The same flags as the first run, so this reuses that build.
       - name: Demo
-        run: pixi run demo-lfortran
+        run: fpm run --example demo --compiler ${{ steps.fortran.outputs.fc }} ${{ matrix.args }}
+
       # The pictures, to look at when a fingerprint or a comparison fails.
       - name: Upload the test pictures
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: tests-out-lfortran
+          name: tests-out-${{ matrix.compiler }}
           path: tests/out/
 
   # The pictures of the flang build against matplotlib's. The first step makes
   # the references and the pictures; the comparisons after it reuse both.
+  # This one stays on pixi, which is where matplotlib and the rasterizers are.
   matplotlib:
     name: Matplotlib comparison (Flang)
     runs-on: ubuntu-latest

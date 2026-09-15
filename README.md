@@ -295,9 +295,14 @@ SVG looks like. PNG, PDF and EPS are compared as pixels, since there fplot
 decides.
 
 CI (Linux) has one job per compiler, each with only that compiler and fpm
-installed: gfortran and flang are tested plain and with `-O3 -march=native`,
-LFortran plain, and each job also builds and runs the demo. A separate job
-compares the flang build against matplotlib.
+installed, the compiler from `fortran-lang/setup-fortran`: gfortran, flang
+and ifx are tested twice, the second time with `-O3 -march=native` so that
+fused multiply-add is allowed and the pictures must not change; LFortran is
+tested once. Each job also builds and runs the demo. ifx is given
+`-fp-model precise`, because by default it reassociates, which turns a
+linspace into a running sum and moves its endpoint and a contour grid's
+exactly-zero column by a few ulps. A separate job, on pixi, compares the
+flang build against matplotlib.
 
 ## Layout
 
