@@ -13,3 +13,7 @@ Use the download link at the bottom of an example to get the ``.f90`` source,
 then build it with::
 
     fpm run --example <name>
+
+Some examples also use the `Fortran standard library
+<https://stdlib.fortran-lang.org>`_, the way a Python one would use numpy. For
+those, add ``stdlib = "*"`` to the ``[dependencies]`` of your ``fpm.toml``.

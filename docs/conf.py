@@ -79,7 +79,12 @@ sphinx_gallery_conf = {
 #   fplotlib_gallery_compiler  -- --compiler passed to fpm (default: fpm's own)
 #   fplotlib_gallery_fpm_flags -- extra --flag string, None to autodetect
 #   fplotlib_gallery_timeout   -- seconds allowed per fpm call and per example
+#   fplotlib_gallery_dependencies -- extra fpm dependencies of the examples, as
+#                                 {name: TOML value}
 fplotlib_gallery_compiler = os.environ.get("FPM_FC")
+# The examples may use the Fortran standard library, as a Python one would use
+# numpy (stdlib_math's meshgrid, for one). "*" is fpm's metapackage for it.
+fplotlib_gallery_dependencies = {"stdlib": '"*"'}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

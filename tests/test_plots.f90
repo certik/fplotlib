@@ -74,6 +74,7 @@ program test_plots
         11.0_dp, 12.0_dp, 13.0_dp, 14.0_dp, 15.0_dp, 16.0_dp, 17.0_dp, &
         18.0_dp, 19.0_dp]
     real(dp) :: qx(64), qy(64), qu(64), qv(64)
+    real(dp) :: kx(400), ky(400)
     real(dp) :: hx(500), hy(500), mz(6, 6), ev(40)
     real(dp) :: sxg(16), syg(16), su(16, 16), sv(16, 16)
     real(dp), parameter :: yedge(nzr + 1) = [ &
@@ -880,6 +881,19 @@ program test_plots
     call yticks([real(dp) ::])
     call title("table")
     call save_all("table")
+
+    ! 126) a vector field with a key above the axes
+    call clf()
+    do i = 1, 20
+        do j = 1, 20
+            k = (i - 1)*20 + j
+            kx(k) = real(j - 11, dp)
+            ky(k) = real(i - 11, dp)
+        end do
+    end do
+    call quiver(kx, ky, kx, ky)
+    call quiverkey(0.3_dp, 1.1_dp, 10.0_dp, "Quiver key, length = 10", labelpos="E")
+    call save_all("quiverkey")
 
     ! 125) level lines drawn in space
     call clf()

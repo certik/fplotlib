@@ -1250,17 +1250,33 @@ contains
         type(series_t), intent(in) :: s
         real(dp), intent(in) :: xmin, xmax, ymin, ymax, ax_l, ax_w, ax_b, ax_h
         type(scale_t), intent(in) :: xsc, ysc
-        real(dp), parameter :: HEAD_W = 3.0_dp, HEAD_L = 5.0_dp, HEAD_AX = 4.5_dp
-        real(dp) :: w, sc, sn, amean, mag, ln, ct, st, px(8), py(8), qx(8), qy(8)
-        real(dp) :: x0, y0
-        integer :: j, k
+        real(dp) :: w, sc
+        integer :: j
 
         if (s%n <= 0) return
+        call quiver_scale(s, ax_w, w, sc)
+        do j = 1, s%n
+            call quiver_arrow(b, map_x(s%x(j), xmin, xmax, ax_l, ax_w, xsc), &
+                              map_y(s%y(j), ymin, ymax, ax_b, ax_h, ysc), &
+                              s%qu(j), s%qv(j), w, sc, ax_w, 0.0_dp, &
+                              trim(s%color), s%alpha)
+        end do
+    end subroutine append_quiver
+
+    ! The shaft width in pixels and the scale, the data length of a vector
+    ! one axes width long, both as matplotlib chooses them when left alone.
+    subroutine quiver_scale(s, ax_w, w, sc)
+        type(series_t), intent(in) :: s
+        real(dp), intent(in) :: ax_w
+        real(dp), intent(out) :: w, sc
+        real(dp) :: amean, sn
+        integer :: j
+
         amean = 0.0_dp
         do j = 1, s%n
             amean = amean + hypot(s%qu(j), s%qv(j))
         end do
-        amean = amean/real(s%n, dp)
+        amean = amean/real(max(1, s%n), dp)
 
         w = s%qwidth
         if (w < 0.0_dp) w = 0.06_dp/min(25.0_dp, max(8.0_dp, sqrt(real(s%n, dp))))
@@ -1271,33 +1287,121 @@ contains
             sc = 1.8_dp*amean*sn
             if (sc <= 0.0_dp) sc = 1.0_dp
         end if
+    end subroutine quiver_scale
 
-        do j = 1, s%n
-            mag = hypot(s%qu(j), s%qv(j))
-            if (mag <= 0.0_dp) cycle
-            ! Arrow length in shaft widths, so the outline below is pure
-            ! geometry and needs no further conditioning.
-            ln = mag*ax_w/(sc*w)
-            ct = s%qu(j)/mag
-            st = s%qv(j)/mag
-            qx = [0.0_dp, ln - HEAD_AX, ln - HEAD_L, ln, ln - HEAD_L, ln - HEAD_AX, 0.0_dp, 0.0_dp]
-            qy = 0.5_dp*[1.0_dp, 1.0_dp, HEAD_W, 0.0_dp, -HEAD_W, -1.0_dp, -1.0_dp, 1.0_dp]
-            ! A vector too short for a shaft is drawn as head alone,
-            ! shrunk to the length it has.
-            if (ln < HEAD_L) then
-                qx = (ln/HEAD_L)*[0.0_dp, HEAD_L - HEAD_AX, HEAD_L - HEAD_L, HEAD_L, &
-                                  HEAD_L - HEAD_L, HEAD_L - HEAD_AX, 0.0_dp, 0.0_dp]
-                qy = (ln/HEAD_L)*qy
-            end if
-            x0 = map_x(s%x(j), xmin, xmax, ax_l, ax_w, xsc)
-            y0 = map_y(s%y(j), ymin, ymax, ax_b, ax_h, ysc)
-            do k = 1, 8
-                px(k) = x0 + w*(qx(k)*ct - qy(k)*st)
-                py(k) = y0 - w*(qx(k)*st + qy(k)*ct)
-            end do
-            call append_polygon(b, px, py, 7, trim(s%color), s%alpha)
+    ! One quiver arrow for the vector (u, v), anchored at (x0, y0) in
+    ! pixels. pivot is the fraction of the arrow's length that lies behind
+    ! the anchor: 0 puts the tail there, 0.5 the middle and 1 the tip, as
+    ! matplotlib's pivot "tail", "middle" and "tip" do.
+    subroutine quiver_arrow(b, x0, y0, u, v, w, sc, ax_w, pivot, color, alpha)
+        class(renderer_t), intent(inout) :: b
+        real(dp), intent(in) :: x0, y0, u, v, w, sc, ax_w, pivot, alpha
+        character(len=*), intent(in) :: color
+        real(dp), parameter :: HEAD_W = 3.0_dp, HEAD_L = 5.0_dp, HEAD_AX = 4.5_dp
+        real(dp) :: mag, ln, ct, st, px(8), py(8), qx(8), qy(8)
+        integer :: k
+
+        mag = hypot(u, v)
+        if (mag <= 0.0_dp) return
+        ! Arrow length in shaft widths, so the outline below is pure
+        ! geometry and needs no further conditioning.
+        ln = mag*ax_w/(sc*w)
+        ct = u/mag
+        st = v/mag
+        qx = [0.0_dp, ln - HEAD_AX, ln - HEAD_L, ln, ln - HEAD_L, ln - HEAD_AX, 0.0_dp, 0.0_dp]
+        qy = 0.5_dp*[1.0_dp, 1.0_dp, HEAD_W, 0.0_dp, -HEAD_W, -1.0_dp, -1.0_dp, 1.0_dp]
+        ! A vector too short for a shaft is drawn as head alone,
+        ! shrunk to the length it has.
+        if (ln < HEAD_L) then
+            qx = (ln/HEAD_L)*[0.0_dp, HEAD_L - HEAD_AX, HEAD_L - HEAD_L, HEAD_L, &
+                              HEAD_L - HEAD_L, HEAD_L - HEAD_AX, 0.0_dp, 0.0_dp]
+            qy = (ln/HEAD_L)*qy
+        end if
+        if (pivot /= 0.0_dp) qx = qx - pivot*qx(4)
+        do k = 1, 8
+            px(k) = x0 + w*(qx(k)*ct - qy(k)*st)
+            py(k) = y0 - w*(qx(k)*st + qy(k)*ct)
         end do
-    end subroutine append_quiver
+        call append_polygon(b, px, py, 7, color, alpha)
+    end subroutine quiver_arrow
+
+    ! The keys of the quivers in this axes, drawn after the clip is lifted
+    ! since matplotlib does not clip them either. Canvas is W by H.
+    subroutine append_quiverkeys(b, a, xmin, xmax, ymin, ymax, ax_l, ax_w, ax_b, ax_h, &
+                                 xsc, ysc, W, H)
+        class(renderer_t), intent(inout) :: b
+        type(axes_t), intent(in) :: a
+        real(dp), intent(in) :: xmin, xmax, ymin, ymax, ax_l, ax_w, ax_b, ax_h, W, H
+        type(scale_t), intent(in) :: xsc, ysc
+        real(dp), parameter :: DEG = acos(-1.0_dp)/180.0_dp
+        type(text_t) :: t
+        real(dp) :: w_px, sc, px, py, sep, pivot
+        integer :: i
+
+        do i = 1, a%n_series
+            associate (s => a%series(i))
+                if (s%kind /= SERIES_QUIVER .or. .not. s%qk_on) cycle
+                select case (trim(s%qk_coord))
+                case ("data")
+                    px = map_x(s%qk_x, xmin, xmax, ax_l, ax_w, xsc)
+                    py = map_y(s%qk_y, ymin, ymax, ax_b, ax_h, ysc)
+                case ("figure")
+                    px = s%qk_x*W
+                    py = (1.0_dp - s%qk_y)*H
+                case ("inches")
+                    px = s%qk_x*PT_PER_IN
+                    py = H - s%qk_y*PT_PER_IN
+                case default
+                    px = ax_l + s%qk_x*ax_w
+                    py = ax_b - s%qk_y*ax_h
+                end select
+
+                t%s = s%qk_label
+                t%fontsize = s%qk_size
+                t%color = rc_text_color
+                if (len_trim(s%qk_lcolor) > 0) t%color = s%qk_lcolor
+                sep = s%qk_sep*PT_PER_IN
+                select case (s%qk_pos)
+                case ("S")
+                    pivot = 0.5_dp
+                    t%ha = "center"
+                    t%va = "top"
+                    t%x = px
+                    t%y = py + sep
+                case ("E")
+                    pivot = 1.0_dp
+                    t%ha = "left"
+                    t%va = "center"
+                    t%x = px + sep
+                    t%y = py
+                case ("W")
+                    pivot = 0.0_dp
+                    t%ha = "right"
+                    t%va = "center"
+                    t%x = px - sep
+                    t%y = py
+                case default
+                    pivot = 0.5_dp
+                    t%ha = "center"
+                    t%va = "bottom"
+                    t%x = px
+                    t%y = py - sep
+                end select
+
+                call quiver_scale(s, ax_w, w_px, sc)
+                if (len_trim(s%qk_color) > 0) then
+                    call quiver_arrow(b, px, py, s%qk_u*cos(s%qk_angle*DEG), &
+                                      s%qk_u*sin(s%qk_angle*DEG), w_px, sc, ax_w, pivot, &
+                                      trim(s%qk_color), s%alpha)
+                else
+                    call quiver_arrow(b, px, py, s%qk_u*cos(s%qk_angle*DEG), &
+                                      s%qk_u*sin(s%qk_angle*DEG), w_px, sc, ax_w, pivot, &
+                                      trim(s%color), s%alpha)
+                end if
+                call append_annotation(b, t, t%x, t%y)
+            end associate
+        end do
+    end subroutine append_quiverkeys
 
     ! matplotlib draws these as a FancyArrowPatch with the "-|>" style at a
     ! mutation scale of ten: a filled triangle four points long and four
@@ -4136,6 +4240,9 @@ contains
         end do
 
         call clear_clip()
+
+        call append_quiverkeys(b, a, xmin, xmax, ymin, ymax, ax_l, ax_w, ax_b, ax_h, &
+                               xsc, ysc, W, H)
 
         do i = 1, a%n_texts
             if (.not. a%texts(i)%in_fig) cycle
