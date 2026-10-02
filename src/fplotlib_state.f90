@@ -188,6 +188,17 @@ module fplotlib_state
         real(dp), allocatable :: qu(:), qv(:)
         real(dp) :: qscale = -1.0_dp
         real(dp) :: qwidth = -1.0_dp
+        ! QUIVER: the key, one arrow of length qk_u drawn to the same scale,
+        ! with a label beside it. qk_coord says where (qk_x, qk_y) is
+        ! measured: "axes", "data", "figure" or "inches". An empty color
+        ! is the quiver's own, an empty label color the text color.
+        logical :: qk_on = .false.
+        real(dp) :: qk_x = 0.0_dp, qk_y = 0.0_dp, qk_u = 1.0_dp
+        real(dp) :: qk_angle = 0.0_dp, qk_sep = 0.1_dp, qk_size = 10.0_dp
+        character(len=8) :: qk_coord = "axes"
+        character(len=1) :: qk_pos = "N"
+        character(len=7) :: qk_color = "", qk_lcolor = ""
+        character(len=256) :: qk_label = ""
         ! BOX/VIOLIN: the position on the category axis, and how the box
         ! is drawn: across instead of up, waisted at the median, with the
         ! mean marked, and filled rather than left as an outline.

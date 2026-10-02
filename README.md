@@ -143,7 +143,8 @@ call suptitle("figure title")
   filled and outlined in data coordinates
 - `clabel` to write the level into each contour line, breaking the line
   at its straightest stretch to make room
-- `quiver` for a field of arrows, sized as matplotlib sizes them
+- `quiver` for a field of arrows, sized as matplotlib sizes them, and
+  `quiverkey` for a reference arrow drawn to the same scale
 - Date axes: `date_num(y, m, d)` for the numbers and `xaxis_date()` to
   have the ticks land on round dates and read as dates
 - `subplot2grid`: panels that span several cells of a grid, so a wide
