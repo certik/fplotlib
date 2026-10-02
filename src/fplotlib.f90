@@ -34,7 +34,7 @@ module fplotlib
     public :: add_rectangle, add_circle, add_ellipse, add_polygon
     public :: add_arrow, add_path
     public :: polar, set_polar
-    public :: quiver
+    public :: quiver, quiverkey
     public :: axhspan, axvspan, hlines, vlines, bar_label
     public :: step, stem, pie, boxplot, violinplot
     public :: axis, set_aspect, tick_params, spines
@@ -93,6 +93,7 @@ module fplotlib
         procedure :: step => ax_step
         procedure :: stem => ax_stem
         procedure :: quiver => ax_quiver
+        procedure :: quiverkey => ax_quiverkey
         procedure :: set_polar => ax_set_polar
         procedure :: add_rectangle => ax_add_rectangle
         procedure :: add_circle => ax_add_circle
@@ -1454,6 +1455,19 @@ contains
         call ax_sca(self)
         call quiver(x, y, u, v, color, scale, width, label)
     end subroutine ax_quiver
+
+    subroutine ax_quiverkey(self, x, y, u, label, angle, coordinates, color, labelpos, &
+                            labelsep, labelcolor, fontsize)
+        class(axes), intent(in) :: self
+        real(dp), intent(in) :: x, y, u
+        character(len=*), intent(in) :: label
+        real(dp), intent(in), optional :: angle, labelsep, fontsize
+        character(len=*), intent(in), optional :: coordinates, color, labelpos, labelcolor
+
+        call ax_sca(self)
+        call quiverkey(x, y, u, label, angle, coordinates, color, labelpos, &
+                       labelsep, labelcolor, fontsize)
+    end subroutine ax_quiverkey
 
     subroutine ax_stem(self, x, y, color, label, alpha)
         class(axes), intent(in) :: self
@@ -4365,6 +4379,52 @@ contains
         if (present(scale)) ax(cur_i)%series(is)%qscale = scale
         if (present(width)) ax(cur_i)%series(is)%qwidth = width
     end subroutine quiver
+
+    ! A key for the last quiver of the current axes: one arrow of length u,
+    ! drawn to that quiver's scale, and a label beside it. As in matplotlib,
+    ! (x, y) is the middle of the arrow when the label is above or below it
+    ! (labelpos "N" or "S"), its head for "E" and its tail for "W"; labelsep
+    ! is the gap to the label in inches. The key is not clipped, so it may
+    ! sit outside the axes.
+    subroutine quiverkey(x, y, u, label, angle, coordinates, color, labelpos, &
+                         labelsep, labelcolor, fontsize)
+        real(dp), intent(in) :: x, y, u
+        character(len=*), intent(in) :: label
+        real(dp), intent(in), optional :: angle, labelsep, fontsize
+        character(len=*), intent(in), optional :: coordinates, color, labelpos, labelcolor
+        integer :: is
+
+        call ensure_fig()
+        do is = ax(cur_i)%n_series, 1, -1
+            if (ax(cur_i)%series(is)%kind == SERIES_QUIVER) exit
+        end do
+        if (is < 1) error stop "fplotlib: quiverkey needs a quiver in the current axes"
+        associate (s => ax(cur_i)%series(is))
+            s%qk_on = .true.
+            s%qk_x = x
+            s%qk_y = y
+            s%qk_u = u
+            s%qk_label = label
+            if (present(angle)) s%qk_angle = angle
+            if (present(labelsep)) s%qk_sep = labelsep
+            if (present(fontsize)) s%qk_size = fontsize
+            if (present(coordinates)) then
+                select case (coordinates)
+                case ("axes", "data", "figure", "inches"); s%qk_coord = coordinates
+                case default
+                    error stop "fplotlib: quiverkey coordinates must be axes, data, figure or inches"
+                end select
+            end if
+            if (present(color)) s%qk_color = resolve_color(color)
+            if (present(labelcolor)) s%qk_lcolor = resolve_color(labelcolor)
+            if (present(labelpos)) then
+                select case (labelpos)
+                case ("N", "S", "E", "W"); s%qk_pos = labelpos
+                case default; error stop "fplotlib: quiverkey labelpos must be N, S, E or W"
+                end select
+            end if
+        end associate
+    end subroutine quiverkey
 
     ! Pie chart. matplotlib turns the axes into a unit square centred on the
     ! origin and hides the frame, so the wedges are plain data-space geometry.

@@ -23,6 +23,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent
 REF = ROOT / "refs"
 OUT_NAMES = [
+    "quiverkey",
     "contour3d",
     "quiver3d",
     "bar3d",
@@ -906,6 +907,14 @@ def main() -> None:
             tpy.append(j + 0.35 * np.cos(5.0 * k))
             tpz.append(tpx[-1] * tpy[-1])
     tx, ty, tz = np.array(tpx), np.array(tpy), np.array(tpz)
+
+    # 126 a vector field with a key above the axes
+    fig, ax = setup_fig()
+    kx = np.arange(-10, 10, 1)
+    ku, kv = np.meshgrid(kx, kx)
+    q = ax.quiver(kx, kx, ku, kv)
+    ax.quiverkey(q, X=0.3, Y=1.1, U=10, label="Quiver key, length = 10", labelpos="E")
+    save(fig, "quiverkey")
 
     # 125 level lines drawn in space
     c3 = np.linspace(-3, 3, 21)
