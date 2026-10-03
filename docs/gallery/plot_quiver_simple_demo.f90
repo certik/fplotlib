@@ -29,11 +29,11 @@ program plot_quiver_simple_demo
     call meshgrid(x, y, u, v)
 
 ! %%
-! ``quiver`` takes one entry per arrow, so the grid is flattened. The
+! :f:subr:`quiver` takes one entry per arrow, so the grid is flattened. The
 ! positions and the vectors are the same arrays: each arrow points away from
 ! the origin, and is the longer the farther out it sits.
 !
-! ``quiverkey`` adds a reference arrow of length 10, drawn to the same scale
+! :f:subr:`quiverkey` adds a reference arrow of length 10, drawn to the same scale
 ! as the field. Its position is in axes coordinates, so ``y = 1.1`` puts it
 ! just above the plot; with ``labelpos="E"`` the arrow's head sits at that
 ! point and the label runs to its right.

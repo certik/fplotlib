@@ -27,7 +27,7 @@ program plot_damped_oscillation
     y2 = cos(omega*t)*envelope
 
 ! %%
-! The envelope first, so the curves are drawn on top of it. ``fill_between``
+! The envelope first, so the curves are drawn on top of it. :f:subr:`fill_between`
 ! takes the band between two curves; ``alpha`` makes it translucent.
 
     call fill_between(t, -envelope, envelope, color="gray", alpha=0.25_dp, &
@@ -47,7 +47,7 @@ program plot_damped_oscillation
     call legend(loc="upper right")
 
 ! %%
-! ``savefig`` picks the backend from the file extension. Ask for ``.svg`` and
+! :f:subr:`savefig` picks the backend from the file extension. Ask for ``.svg`` and
 ! fplotlib writes SVG itself -- there is no external graphics library
 ! underneath. The same program would produce a bitmap by writing ``.png``, or
 ! print-ready output with ``.pdf`` or ``.eps``.

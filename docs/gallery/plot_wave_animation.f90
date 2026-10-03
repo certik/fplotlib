@@ -50,7 +50,7 @@ program plot_wave_animation
     end do
 
 ! %%
-! ``save_animation`` writes the GIF and resets the frame buffer, so one
+! :f:subr:`save_animation` writes the GIF and resets the frame buffer, so one
 ! program can build several animations in turn. ``fps`` sets the playback
 ! rate; pass ``loop=.false.`` for an animation that plays only once.
 
