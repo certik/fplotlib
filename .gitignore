@@ -19,3 +19,8 @@ fplotlib_show.svg
 # python
 __pycache__/
 *.pyc
+
+# sphinx / sphinx-gallery
+docs/_build/
+docs/auto_gallery/
+docs/sg_execution_times.rst

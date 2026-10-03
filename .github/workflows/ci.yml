@@ -61,7 +61,7 @@ jobs:
 
       - name: Set up ${{ matrix.compiler }}
         id: fortran
-        uses: fortran-lang/setup-fortran@v2.0.0-beta.9
+        uses: fortran-lang/setup-fortran@v2.0.0-beta.11
         with:
           compiler: ${{ matrix.compiler }}
           version: latest
