@@ -1,0 +1,146 @@
+name: Docs
+
+# One workflow, three outcomes:
+#
+# * fortran-lang/fplotlib, push to main: build and publish the production docs
+#   to that repository's GitHub Pages.
+# * A fork, push to its preview branch: build and publish a preview to the
+#   fork's own GitHub Pages. The branch is the repository variable
+#   DOCS_PREVIEW_BRANCH, or 'sphinx' when that is not set. Running the workflow
+#   by hand on a fork publishes whichever branch it was started on.
+# * Anything else, pull requests included: build only, and keep the HTML as a
+#   downloadable artifact.
+#
+# Publishing needs Settings > Pages > Source set to "GitHub Actions". On a
+# fork, the github-pages environment must also allow the preview branch to
+# deploy (Settings > Environments > github-pages).
+
+on:
+  push:
+    paths: &paths
+      - 'docs/**'
+      - 'README.md'
+      - 'VERSION'
+      - '.github/workflows/docs.yml'
+      # The gallery extension the docs are built with.
+      - 'sphinx-fplotlib-gallery/**'
+      # The gallery builds the library and runs its examples, and the API
+      # reference reads the sources.
+      - 'src/**'
+      - 'examples/**'
+      - 'fpm.toml'
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LANG: "en_US.UTF-8"
+  LC_ALL: "en_US.UTF-8"
+  PIP_DISABLE_PIP_VERSION_CHECK: "ON"
+  PIP_NO_CLEAN: "ON"
+  PIP_PREFER_BINARY: "ON"
+  TZ: "UTC"
+
+jobs:
+  build:
+    name: Build
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.target.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide where the docs go
+        id: target
+        env:
+          UPSTREAM: fortran-lang/fplotlib
+          PREVIEW_BRANCH: ${{ vars.DOCS_PREVIEW_BRANCH || 'sphinx' }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          publish=none
+          if [ "$REPO" = "$UPSTREAM" ]; then
+            if [ "$EVENT" != pull_request ] && [ "$BRANCH" = main ]; then
+              publish=production
+            fi
+          elif [ "$EVENT" = workflow_dispatch ] \
+               || { [ "$EVENT" = push ] && [ "$BRANCH" = "$PREVIEW_BRANCH" ]; }; then
+            publish=preview
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Docs for $REPO@$BRANCH ($EVENT): publish=$publish"
+
+      - name: Configure GitHub Pages
+        if: steps.target.outputs.publish != 'none'
+        uses: actions/configure-pages@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # The gallery in docs/gallery is built and run during the docs build, so
+      # the same toolchain the tests use has to be here too.
+      - name: Set up GFortran
+        id: fortran
+        uses: fortran-lang/setup-fortran@v2.0.0-beta.11
+        with:
+          compiler: gfortran
+          version: latest
+
+      - uses: fortran-lang/setup-fpm@v10
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # The gallery extension comes from this checkout rather than from PyPI,
+      # so the docs always exercise the version being changed.
+      - name: Install dependencies
+        run: |
+          pip install ./sphinx-fplotlib-gallery -r docs/requirements.txt
+          python --version
+          sphinx-build --version
+          ford --version
+
+      - name: Build Docs
+        env:
+          # Picked up by docs/conf.py as fplotlib_gallery_compiler.
+          FPM_FC: ${{ steps.fortran.outputs.fc }}
+        run: sphinx-build -W -b html docs docs/_build/html
+
+      - name: Upload the HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-html
+          path: ./docs/_build/html/
+
+      - name: Upload Pages artifact
+        if: steps.target.outputs.publish != 'none'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./docs/_build/html/
+
+  deploy:
+    name: Publish (${{ needs.build.outputs.publish }})
+    if: needs.build.outputs.publish != 'none'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    # Never cancel a deployment half way; queue the next one instead.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

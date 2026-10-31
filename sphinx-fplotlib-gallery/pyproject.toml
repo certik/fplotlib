@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sphinx-fplotlib-gallery"
+dynamic = ["version"]
+description = "Sphinx-Gallery support for Fortran examples that plot with fplotlib"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "fplotlib maintainers" }]
+keywords = ["sphinx", "sphinx-gallery", "fortran", "fpm", "fplotlib", "plotting"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Sphinx :: Extension",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Fortran",
+    "Programming Language :: Python :: 3",
+    "Topic :: Documentation :: Sphinx",
+]
+dependencies = [
+    "sphinx>=7",
+    # The extension replaces Sphinx-Gallery's executor for Fortran sources and
+    # relies on its block parser and scraper API.
+    "sphinx-gallery>=0.17",
+]
+
+[project.urls]
+Homepage = "https://github.com/fortran-lang/fplotlib"
+Documentation = "https://fortran-lang.github.io/fplotlib/"
+Source = "https://github.com/fortran-lang/fplotlib/tree/main/sphinx-fplotlib-gallery"
+Issues = "https://github.com/fortran-lang/fplotlib/issues"
+
+[tool.hatch.version]
+path = "src/fplotlib_gallery/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fplotlib_gallery"]

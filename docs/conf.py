@@ -6,9 +6,10 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../src'))
-# docs/_ext holds fplotlib_gallery, the Sphinx-Gallery glue that builds, runs
-# and scrapes the Fortran examples in docs/gallery.
-sys.path.insert(0, os.path.abspath('_ext'))
+# fplotlib_gallery, the Sphinx-Gallery glue that builds, runs and scrapes the
+# Fortran examples in docs/gallery, is the sphinx-fplotlib-gallery package in
+# ../sphinx-fplotlib-gallery. Install it from there so the docs always use the
+# in-tree version: pip install ./sphinx-fplotlib-gallery
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -73,14 +74,9 @@ sphinx_gallery_conf = {
     "remove_config_comments": True,
 }
 
-# fplotlib_gallery settings; the defaults suit an in-tree build.
-#   fplotlib_gallery_root      -- checkout to build against (default: repo root)
-#   fplotlib_gallery_fpm       -- the fpm executable
-#   fplotlib_gallery_compiler  -- --compiler passed to fpm (default: fpm's own)
-#   fplotlib_gallery_fpm_flags -- extra --flag string, None to autodetect
-#   fplotlib_gallery_timeout   -- seconds allowed per fpm call and per example
-#   fplotlib_gallery_dependencies -- extra fpm dependencies of the examples, as
-#                                 {name: TOML value}
+# fplotlib_gallery settings; the defaults suit an in-tree build, where the
+# examples are built against this checkout. See sphinx-fplotlib-gallery's
+# README for the full list.
 fplotlib_gallery_compiler = os.environ.get("FPM_FC")
 # The examples may use the Fortran standard library, as a Python one would use
 # numpy (stdlib_math's meshgrid, for one). "*" is fpm's metapackage for it.
