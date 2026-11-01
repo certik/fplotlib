@@ -2,6 +2,6 @@ sphinx
 myst-parser
 ford
 pydata_sphinx_theme
-sphinx-fplotlib-gallery
+sphinx-fplotlib-gallery>=0.2
 sphinx-fortran-domain
 sphinx-gallery
