@@ -1,0 +1,116 @@
+name: sphinx-fplotlib-gallery
+
+# Builds and checks the sphinx-fplotlib-gallery package, and publishes it.
+#
+# * Pull requests that touch it: build, check and smoke-test the package.
+# * A tag sphinx-fplotlib-gallery-vX.Y.Z on fortran-lang/fplotlib: the same,
+#   then publish to PyPI. The tag must match __version__ in the package.
+# * Run by hand with "testpypi": publish to TestPyPI, to try a release out.
+#
+# Publishing uses PyPI trusted publishing, so no token is stored here. Each
+# index needs a trusted publisher for this repository, this workflow file and
+# the environment named below ("pypi" or "testpypi").
+
+on:
+  pull_request:
+    paths:
+      - 'sphinx-fplotlib-gallery/**'
+      - '.github/workflows/sphinx-fplotlib-gallery.yml'
+  push:
+    tags:
+      - 'sphinx-fplotlib-gallery-v*'
+  workflow_dispatch:
+    inputs:
+      index:
+        description: Where to publish
+        type: choice
+        options: [none, testpypi]
+        default: none
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "ON"
+
+jobs:
+  build:
+    name: Build and check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Build
+        run: |
+          pip install build twine
+          python -m build sphinx-fplotlib-gallery --outdir dist
+
+      - name: Check the metadata PyPI will render
+        run: twine check --strict dist/*
+
+      - name: Check the tag matches the version
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          wheel=$(ls dist/*.whl)
+          version=$(basename "$wheel" | cut -d- -f2)
+          if [ "$TAG" != "sphinx-fplotlib-gallery-v$version" ]; then
+            echo "::error::Tag $TAG does not match the package version $version"
+            exit 1
+          fi
+
+      # The wheel alone, outside the checkout, so a file missing from it shows.
+      - name: Smoke test
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m venv smoke
+          smoke/bin/pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          smoke/bin/python -c "import fplotlib_gallery as g; print(g.__file__, g.__version__)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sphinx-fplotlib-gallery-dist
+          path: dist/
+
+  pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'fortran-lang/fplotlib'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/sphinx-fplotlib-gallery
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sphinx-fplotlib-gallery-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  testpypi:
+    name: Publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch' && inputs.index == 'testpypi'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/sphinx-fplotlib-gallery
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sphinx-fplotlib-gallery-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # A version can be uploaded only once; trying it again is not an error.
+          skip-existing: true
