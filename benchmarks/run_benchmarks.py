@@ -29,14 +29,17 @@ def main():
     a = ap.parse_args()
     rows = []
     work = Path(tempfile.mkdtemp())
-    build = work / "build"
+    build = ROOT / "build"
+    shutil.rmtree(build, ignore_errors=True)
 
     # Library compile (full, from scratch)
-    t = timed(["fpm", "build", "--flag", " ".join(FFLAGS), "--builddir", str(build)], cwd=ROOT)
+    t = timed(["fpm", "build", "--flag", " ".join(FFLAGS)], cwd=ROOT)
     rows.append(("Compile library", "fplotlib (fpm build, -O3)", t))
 
     libdirs = [p for p in build.rglob("libfplotlib.a")]
     moddirs = {p.parent for p in build.rglob("fplotlib.mod")}
+    if not libdirs or not moddirs:
+        sys.exit(f"fpm build produced no library under {build}")
     lib, mod = libdirs[0], next(iter(moddirs))
 
     for name in ("simple", "complex"):
