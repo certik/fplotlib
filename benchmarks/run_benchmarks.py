@@ -18,6 +18,21 @@ def timed(cmd, cwd=None):
     return time.perf_counter() - t
 
 
+def py_run(script, ext, cwd):
+    """Run time of main() alone, as reported by the script after its imports."""
+    r = subprocess.run([sys.executable, str(script), ext], cwd=cwd, check=True,
+                       capture_output=True, text=True)
+    for line in r.stdout.splitlines():
+        if line.startswith("RUN_SECONDS"):
+            return float(line.split()[1])
+    raise RuntimeError(f"no RUN_SECONDS in output of {script}")
+
+
+def check(path):
+    if not path.is_file() or path.stat().st_size == 0:
+        sys.exit(f"missing or empty output: {path}")
+
+
 def median(f, n):
     return statistics.median(f() for _ in range(n))
 
@@ -53,9 +68,11 @@ def main():
         rows.append((f"Import {name} script", "Python imports (matplotlib, numpy)", t))
         for ext in ("png", "pdf"):
             tf = median(lambda: timed([str(exe), ext], cwd=work), a.repeats)
-            tp = median(lambda: timed([sys.executable, str(HERE / f"{name}.py"), ext], cwd=work), a.repeats)
+            tp = median(lambda: py_run(HERE / f"{name}.py", ext, work), a.repeats)
+            check(work / f"{name}_f.{ext}")
+            check(work / f"{name}_py.{ext}")
             rows.append((f"Run {name} -> {ext}", "fplotlib", tf))
-            rows.append((f"Run {name} -> {ext}", "matplotlib (incl. imports)", tp))
+            rows.append((f"Run {name} -> {ext}", "matplotlib (excl. imports)", tp))
 
     out = "| Benchmark | Variant | Time (s) |\n|---|---|---|\n"
     out += "\n".join(f"| {a_} | {b} | {c:.4f} |" for a_, b, c in rows) + "\n"

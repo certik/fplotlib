@@ -1,4 +1,5 @@
 import sys
+import time
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -10,4 +11,6 @@ def main(ext="png"):
     plt.savefig("simple_py." + ext)
 
 if __name__ == "__main__":
+    t0 = time.perf_counter()
     main(*sys.argv[1:2])
+    print(f"RUN_SECONDS {time.perf_counter() - t0:.6f}")
