@@ -29,7 +29,7 @@ module fplotlib
     public :: bar, barh, hist, fill_between, fill_betweenx, stackplot
     public :: errorbar, axhline, axvline, axline
     public :: pcolormesh, pcolor, hist2d, hexbin
-    public :: matshow, eventplot, broken_barh, streamplot, table
+    public :: spy, matshow, eventplot, broken_barh, streamplot, table
     public :: add_axes, secondary_xaxis, secondary_yaxis
     public :: add_rectangle, add_circle, add_ellipse, add_polygon
     public :: add_arrow, add_path
@@ -196,6 +196,11 @@ module fplotlib
     interface imshow
         module procedure imshow_z, imshow_rgb
     end interface imshow
+
+    ! Sparsity pattern of a dense matrix, or of a COO index array.
+    interface spy
+        module procedure spy_dense, spy_coo
+    end interface spy
 
     ! One dataset or a whole block of them, a row to each.
     interface boxplot
@@ -2703,6 +2708,72 @@ contains
             if (trim(aspect) == "auto") ax(cur_i)%aspect = 0.0_dp
         end if
     end subroutine imshow_rgb
+
+    ! matplotlib's spy for a dense matrix: a marker at every entry whose
+    ! magnitude exceeds precision (default 0, i.e. every non-zero entry).
+    ! Indices are Fortran's, so the first row and column sit at 1.
+    subroutine spy_dense(a, precision, markersize, color, marker)
+        real(dp), intent(in) :: a(:, :)
+        real(dp), intent(in), optional :: precision, markersize
+        character(len=*), intent(in), optional :: color, marker
+        real(dp) :: tol
+        logical, allocatable :: mask(:, :)
+        integer, allocatable :: ij(:, :)
+        integer :: i, j, k
+
+        tol = 0.0_dp
+        if (present(precision)) tol = abs(precision)
+        mask = abs(a) > tol
+        allocate (ij(2, count(mask)))
+        k = 0
+        do j = 1, size(a, 2)
+            do i = 1, size(a, 1)
+                if (mask(i, j)) then
+                    k = k + 1
+                    ij(:, k) = [i, j]
+                end if
+            end do
+        end do
+        call spy_coo(ij, size(a, 1), size(a, 2), markersize, color, marker)
+    end subroutine spy_dense
+
+    ! Sparsity pattern from COO indices: ij(1, :) are the rows and ij(2, :)
+    ! the columns of the stored entries, 1-based. m and n are the matrix
+    ! shape; without them the largest index in each is used.
+    subroutine spy_coo(ij, m, n, markersize, color, marker)
+        integer, intent(in) :: ij(:, :)
+        integer, intent(in), optional :: m, n
+        real(dp), intent(in), optional :: markersize
+        character(len=*), intent(in), optional :: color, marker
+        integer :: nr, nc
+        real(dp) :: ms
+        character(len=:), allocatable :: mk
+
+        if (size(ij, 1) /= 2) error stop "fplotlib: spy needs a (2, nnz) index array"
+        nr = 0
+        nc = 0
+        if (size(ij, 2) > 0) then
+            nr = maxval(ij(1, :))
+            nc = maxval(ij(2, :))
+        end if
+        if (present(m)) nr = m
+        if (present(n)) nc = n
+        ms = 10.0_dp
+        if (present(markersize)) ms = markersize
+        mk = "s"
+        if (present(marker)) mk = marker
+
+        call ensure_fig()
+        if (size(ij, 2) > 0) then
+            call plot(real(ij(2, :), dp), real(ij(1, :), dp), marker=mk, &
+                      linestyle="None", color=color, markersize=ms)
+        end if
+        call xlim(0.5_dp, real(nc, dp) + 0.5_dp)
+        call ylim(0.5_dp, real(nr, dp) + 0.5_dp)
+        ax(cur_i)%y_inv = .true.
+        ax(cur_i)%x_top = .true.
+        call set_aspect(1.0_dp, "box")
+    end subroutine spy_coo
 
     ! matshow: an image of a matrix. The first row is at the top, the
     ! cells are square and the column numbers run along the top, which is
