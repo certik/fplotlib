@@ -1,7 +1,7 @@
 """Benchmark fplotlib against Matplotlib (issue #35).
 
 Measures: library compile time, import time (Python) vs program compile time
-(Fortran), and run time of simple/complex plots for PNG and PDF.
+(Fortran), and run time of simple/complex plots for PNG and PDF and a GIF animation.
 Usage: python benchmarks/run_benchmarks.py [--repeats N] [--out results.md]
 """
 import argparse, os, shutil, statistics, subprocess, sys, tempfile, time
@@ -57,16 +57,17 @@ def main():
         sys.exit(f"fpm build produced no library under {build}")
     lib, mod = libdirs[0], next(iter(moddirs))
 
-    for name in ("simple", "complex"):
+    for name, exts in (("simple", ("png", "pdf")), ("complex", ("png", "pdf")),
+                       ("animation", ("gif",))):
         exe = work / f"{name}_f"
         cmd = ["gfortran", *FFLAGS, "-I", str(mod), str(HERE / f"{name}.f90"),
                str(lib), "-o", str(exe)]
         t = median(lambda: timed(cmd), a.repeats)
         rows.append((f"Compile {name} program", "Fortran compile to binary", t))
         t = median(lambda: timed([sys.executable, "-c",
-                   "import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot, numpy"]), a.repeats)
+                   "import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot, matplotlib.animation, numpy"]), a.repeats)
         rows.append((f"Import {name} script", "Python imports (matplotlib, numpy)", t))
-        for ext in ("png", "pdf"):
+        for ext in exts:
             tf = median(lambda: timed([str(exe), ext], cwd=work), a.repeats)
             tp = median(lambda: py_run(HERE / f"{name}.py", ext, work), a.repeats)
             check(work / f"{name}_f.{ext}")

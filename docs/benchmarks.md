@@ -16,6 +16,9 @@ Measured items:
 - **Runtime**: generating a PNG and a PDF from a *simple* plot (one line) and a
   *complex* plot (3 curves, fill, legend, grid, labels, 5000 points), Python
   script versus Fortran binary.
+- **Animation**: a 40-frame, 240-point travelling wave saved as a GIF
+  (`clf`/`plot`/`add_frame`/`save_animation` versus Matplotlib
+  `FuncAnimation` with `PillowWriter`).
 
 ## Results
 
