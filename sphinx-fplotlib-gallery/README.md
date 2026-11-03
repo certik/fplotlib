@@ -100,6 +100,20 @@ end program plot_sine
 Every format fplotlib writes works, including animated GIF from
 `save_animation`. Each example runs in an empty directory of its own.
 
+## The gallery header
+
+Sphinx-Gallery introduces each gallery with a `GALLERY_HEADER` file in the
+examples directory. Besides `GALLERY_HEADER.rst`, this extension accepts
+`GALLERY_HEADER.md` written in MyST Markdown, provided `myst_parser` is in
+`extensions`. Give the gallery a label the MyST way:
+
+```markdown
+(gallery)=
+# Gallery
+
+Every example below is a complete Fortran program.
+```
+
 ## Troubleshooting
 
 On Windows, fpm can fail with `Cannot open file '...o.digest'` when the docs

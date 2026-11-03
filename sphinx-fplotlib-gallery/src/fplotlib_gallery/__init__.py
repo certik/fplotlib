@@ -112,6 +112,17 @@ Two things to know when building animations.  Frames have to come out the same
 size, so keep anything that changes the layout out of the frame loop, and
 ``save_animation`` only writes GIF.
 
+The gallery header
+------------------
+
+Sphinx-Gallery introduces a gallery with its ``GALLERY_HEADER`` file.  Besides
+``GALLERY_HEADER.rst``, this extension accepts ``GALLERY_HEADER.md``, written in
+MyST Markdown, when ``myst_parser`` is among the Sphinx extensions.
+Sphinx-Gallery would paste a Markdown header unconverted into the reST index it
+generates, so the extension hands it a one-line ``include`` of the Markdown file
+instead, parsed by MyST.  A label for the gallery is written the MyST way,
+``(gallery)=`` above the title.
+
 Finally, the example runs in an empty scratch directory of its own, so it may
 write whatever it likes and should refer to its own files by plain relative
 names.  ``sphinx-build -D plot_gallery=0`` renders the pages without a Fortran
@@ -147,7 +158,7 @@ from sphinx.util.console import blue, bold, red
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 #: Source suffixes treated as Fortran gallery examples (compared lower-cased).
 FORTRAN_SUFFIXES = (".f90", ".f95", ".f03", ".f08", ".f")
@@ -737,15 +748,74 @@ def _report_failure(exc: FortranExampleError, script_vars, gallery_conf) -> str:
     )
 
 
+# -- Markdown gallery headers ---------------------------------------------
+
+#: Header suffixes parsed by MyST, and the parser the include names.
+_MARKDOWN_SUFFIXES = (".md",)
+_MYST_PARSER = "myst_parser.sphinx_"
+
+_ORIGINAL_GET_GALLERY_HEADER = None
+#: The Sphinx source directory and where the include shims are written.
+_HEADER_SRCDIR: Path | None = None
+_HEADER_SHIM_DIR: Path | None = None
+
+
+def _get_gallery_header(dir_, gallery_conf, raise_error=True):
+    """Stand in for ``gen_rst._get_gallery_header``.
+
+    Sphinx-Gallery finds a header with any suffix Sphinx can parse, but copies
+    its text verbatim into the reST index it generates.  For a Markdown header
+    this returns a shim instead: a file of the same name whose only content is
+    a reST ``include`` of the real header through MyST.  Keeping the name lets
+    Sphinx-Gallery still recognise the header and leave it out of the files it
+    copies next to the gallery.
+    """
+    header = _ORIGINAL_GET_GALLERY_HEADER(dir_, gallery_conf, raise_error)
+    if (
+        header is None
+        or _HEADER_SHIM_DIR is None
+        or Path(header).suffix.lower() not in _MARKDOWN_SUFFIXES
+    ):
+        return header
+
+    header = Path(header).resolve()
+    try:
+        # A leading "/" makes Sphinx resolve the include from the source
+        # directory, wherever the generated index lives.
+        target = "/" + header.relative_to(_HEADER_SRCDIR).as_posix()
+    except ValueError:
+        raise ExtensionError(
+            f"fplotlib_gallery: the Markdown gallery header {header} is outside "
+            f"the Sphinx source directory {_HEADER_SRCDIR}, so it cannot be "
+            f"included. Move the gallery under it or use GALLERY_HEADER.rst."
+        ) from None
+
+    stem = re.sub(r"[^0-9A-Za-z_]", "_", target.strip("/"))
+    shim = _HEADER_SHIM_DIR / stem / header.name
+    shim.parent.mkdir(parents=True, exist_ok=True)
+    content = f".. include:: {target}\n   :parser: {_MYST_PARSER}\n"
+    if not shim.is_file() or shim.read_text(encoding="utf-8") != content:
+        shim.write_text(content, encoding="utf-8")
+    return str(shim)
+
+
 def _patch_sphinx_gallery() -> None:
     """Route Fortran examples through our executor, once."""
-    global _ORIGINAL_EXECUTE_SCRIPT
+    global _ORIGINAL_EXECUTE_SCRIPT, _ORIGINAL_GET_GALLERY_HEADER
     if _ORIGINAL_EXECUTE_SCRIPT is not None:
         return
-    from sphinx_gallery import gen_rst
+    from sphinx_gallery import gen_gallery, gen_rst
 
     _ORIGINAL_EXECUTE_SCRIPT = gen_rst.execute_script
     gen_rst.execute_script = _execute_script
+
+    # Both modules hold their own reference to the header lookup.
+    original = getattr(gen_rst, "_get_gallery_header", None)
+    if original is not None:
+        _ORIGINAL_GET_GALLERY_HEADER = original
+        gen_rst._get_gallery_header = _get_gallery_header
+        if getattr(gen_gallery, "_get_gallery_header", None) is original:
+            gen_gallery._get_gallery_header = _get_gallery_header
 
 
 def _on_config_inited(app, config) -> None:
@@ -774,6 +844,14 @@ def _on_config_inited(app, config) -> None:
 
     _SAVE_CALL = _compile_save_call(config.fplotlib_gallery_save_functions)
     _GALLERY = FortranGallery(app)
+
+    # Markdown gallery headers need MyST to parse the include.
+    global _HEADER_SRCDIR, _HEADER_SHIM_DIR
+    if "myst_parser" in config.extensions:
+        _HEADER_SRCDIR = Path(app.srcdir).resolve()
+        _HEADER_SHIM_DIR = _GALLERY.build_dir / "headers"
+    else:
+        _HEADER_SRCDIR = _HEADER_SHIM_DIR = None
     _patch_sphinx_gallery()
 
 
