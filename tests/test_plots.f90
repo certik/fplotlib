@@ -837,6 +837,14 @@ program test_plots
     call matshow(mz)
     call save_all("matshow")
 
+    call figure()
+    call spy(reshape([1.0_dp, 0.0_dp, 0.0_dp, 2.0_dp, 0.0_dp, 3.0_dp], [2, 3]))
+    call save_all("spy_dense")
+
+    call figure()
+    call spy(reshape([1, 1, 2, 3, 4, 2], [2, 3]), m=5, n=4)
+    call save_all("spy_coo")
+
 ! 70) a row of events
     call clf()
     do i = 1, 40

@@ -124,7 +124,7 @@ call suptitle("figure title")
 - `table` for a block of text below (or above) the axes
 - `streamplot` for the streamlines of a vector field
 - `add_frame` / `save_animation(file, fps=, loop=)` to write an animated GIF
-- `matshow`, `eventplot` and `broken_barh`
+- `spy` (sparsity pattern of a dense matrix or COO indices), `matshow`, `eventplot` and `broken_barh`
 - `hist2d` and `hexbin` for counting points into square or hexagonal bins
 - `imshow(interpolation="bilinear")` to smooth an image instead of
   showing it as blocks
