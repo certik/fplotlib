@@ -2723,6 +2723,7 @@ contains
 
         tol = 0.0_dp
         if (present(precision)) tol = abs(precision)
+        allocate (mask(size(a, 1), size(a, 2)))
         mask = abs(a) > tol
         allocate (ij(2, count(mask)))
         k = 0
