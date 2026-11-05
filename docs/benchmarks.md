@@ -1,7 +1,6 @@
 # Benchmarks
 
-fplotlib is compared against Matplotlib (see issue #35). The code lives in
-`benchmarks/` and is run with:
+fplotlib is compared against Matplotlib. The code lives in `benchmarks/` and is run with:
 
 ```
 pip install -r benchmarks/requirements.txt
