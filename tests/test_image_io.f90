@@ -1,4 +1,4 @@
-! Reading back what the tests wrote: PNG and GIF, decoded to RGB.
+! Reading back what the tests wrote: PNG, APNG and GIF, decoded to RGB.
 !
 ! The fingerprints in test_fingerprint are taken from the files on disk
 ! rather than from the renderer's memory, so that the PNG and GIF encoders
@@ -10,7 +10,7 @@ module test_image_io
     implicit none
     private
 
-    public :: read_png_rgb, read_gif_frames
+    public :: read_png_rgb, read_apng_frames, read_gif_frames
 
     type :: huff_t
         integer :: count(0:15) = 0
@@ -231,11 +231,9 @@ contains
     subroutine read_png_rgb(path, rgb)
         character(len=*), intent(in) :: path
         integer, allocatable, intent(out) :: rgb(:, :, :)
-        integer, allocatable :: b(:), idat(:), raw(:)
-        integer :: i, p, ln, w, h, depth, ctype, bpp, nidat, fsize
-        integer :: x, y, c, stride, f, a, bb, cc, v, pa, pb, pc, base, alpha
+        integer, allocatable :: b(:), idat(:)
+        integer :: p, ln, w, h, depth, ctype, nidat, fsize
         character(len=4) :: typ
-        type(bits_t) :: s
 
         call read_bytes(path, b)
         fsize = size(b)
@@ -263,6 +261,18 @@ contains
             end if
             p = p + 12 + ln
         end do
+        call decode_image(idat(1:nidat), w, h, depth, ctype, rgb)
+    end subroutine read_png_rgb
+
+    ! The zlib stream of one image or frame, unfiltered and composited onto
+    ! white.
+    subroutine decode_image(z, w, h, depth, ctype, rgb)
+        integer, intent(in) :: z(:), w, h, depth, ctype
+        integer, allocatable, intent(out) :: rgb(:, :, :)
+        integer, allocatable :: raw(:)
+        integer :: i, bpp, x, y, c, stride, f, a, bb, cc, v, pa, pb, pc, base, alpha
+        type(bits_t) :: s
+
         if (depth /= 8) error stop "image_io: only 8-bit PNG is read"
         select case (ctype)
         case (0); bpp = 1
@@ -273,8 +283,8 @@ contains
         end select
 
         stride = w*bpp
-        allocate (s%inp(nidat - 2))
-        s%inp = idat(3:nidat)    ! past the two byte zlib header
+        allocate (s%inp(size(z) - 2))
+        s%inp = z(3:)    ! past the two byte zlib header
         allocate (raw(h*(stride + 1)))
         call inflate(s, raw)
 
@@ -326,7 +336,70 @@ contains
                 end do
             end do
         end do
-    end subroutine read_png_rgb
+    end subroutine decode_image
+
+    ! ------------------------------------------------------------------
+    ! APNG: rgb(3, w, h, nframes). Frames are whole and opaque, which is all
+    ! apng_encode writes, so no dispose or blend is applied.
+    ! ------------------------------------------------------------------
+
+    subroutine read_apng_frames(path, rgb)
+        character(len=*), intent(in) :: path
+        integer, allocatable, intent(out) :: rgb(:, :, :, :)
+        integer, allocatable :: b(:), z(:), one(:, :, :)
+        integer :: p, ln, w, h, depth, ctype, nz, nf, nframes, expect
+        character(len=4) :: typ
+
+        call read_bytes(path, b)
+        allocate (z(size(b)))
+        nz = 0
+        nf = 0
+        nframes = 0
+        expect = 0
+        w = 0
+        h = 0
+        depth = 0
+        ctype = -1
+        p = 9
+        do while (p + 8 <= size(b))
+            ln = be32(b, p)
+            typ = achar(b(p + 4))//achar(b(p + 5))//achar(b(p + 6))//achar(b(p + 7))
+            select case (typ)
+            case ("IHDR")
+                w = be32(b, p + 8)
+                h = be32(b, p + 12)
+                depth = b(p + 16)
+                ctype = b(p + 17)
+            case ("acTL")
+                nframes = be32(b, p + 8)
+                allocate (rgb(3, w, h, nframes))
+            case ("fcTL")
+                if (nz > 0) call flush_frame()
+                if (be32(b, p + 8) /= expect) error stop "image_io: APNG sequence"
+                expect = expect + 1
+            case ("IDAT")
+                z(nz + 1:nz + ln) = b(p + 8:p + 7 + ln)
+                nz = nz + ln
+            case ("fdAT")
+                if (be32(b, p + 8) /= expect) error stop "image_io: APNG sequence"
+                expect = expect + 1
+                z(nz + 1:nz + ln - 4) = b(p + 12:p + 7 + ln)
+                nz = nz + ln - 4
+            case ("IEND")
+                exit
+            end select
+            p = p + 12 + ln
+        end do
+        if (nz > 0) call flush_frame()
+        if (nf /= nframes) error stop "image_io: APNG frame count"
+    contains
+        subroutine flush_frame()
+            call decode_image(z(1:nz), w, h, depth, ctype, one)
+            nf = nf + 1
+            rgb(:, :, :, nf) = one
+            nz = 0
+        end subroutine flush_frame
+    end subroutine read_apng_frames
 
     ! ------------------------------------------------------------------
     ! GIF: rgb(3, w, h, nframes). Each frame starts from the previous one,

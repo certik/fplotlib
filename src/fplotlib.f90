@@ -13,6 +13,7 @@ module fplotlib
     use fplotlib_backend_pdf
     use fplotlib_backend_eps
     use fplotlib_gif, only: gif_encode
+    use fplotlib_png, only: apng_encode
     use fplotlib_proj3d
     use fplotlib_backend_png
     use fplotlib_mathtext
@@ -6233,7 +6234,8 @@ contains
         anim_len = need
     end subroutine anim_append
 
-    ! Writes the frames collected so far and starts a new reel, so that a
+    ! Writes the frames collected so far as a GIF, or as an animated PNG for
+    ! .png and .apng (full colour), and starts a new reel, so that a
     ! program can make several animations without a reset call.
     subroutine save_animation(filename, fps, loop)
         character(len=*), intent(in) :: filename
@@ -6247,10 +6249,13 @@ contains
             print *, "fplotlib: no frames; call add_frame before save_animation"
             return
         end if
-        if (file_ext(filename) /= "gif") then
-            print *, "fplotlib: save_animation writes .gif, not .", file_ext(filename)
+        select case (file_ext(filename))
+        case ("gif", "png", "apng")
+        case default
+            print *, "fplotlib: save_animation writes .gif, .png or .apng, not .", &
+                file_ext(filename)
             return
-        end if
+        end select
         rate = 5.0_dp
         if (present(fps)) then
             if (fps <= 0.0_dp) error stop "fplotlib: save_animation fps must be positive"
@@ -6262,8 +6267,16 @@ contains
         ! GIF counts delays in hundredths of a second and viewers treat 0 as
         ! "as fast as you like", so a frame never asks for less than one.
         delay = max(1, nint(100.0_dp/rate))
-        call write_bytes(filename, gif_encode(anim_w, anim_h, anim_n, &
-                                              anim_pix(1:anim_len), delay, rep))
+        if (file_ext(filename) == "gif") then
+            call write_bytes(filename, gif_encode(anim_w, anim_h, anim_n, &
+                                                  anim_pix(1:anim_len), delay, rep))
+        else
+            ! APNG delays are a fraction, so the frame rate is not rounded
+            ! to hundredths of a second.
+            call write_bytes(filename, apng_encode(anim_w, anim_h, anim_n, &
+                             anim_pix(1:anim_len), &
+                             min(65535, max(1, nint(1000.0_dp/rate))), 1000, rep))
+        end if
         anim_n = 0
         anim_w = 0
         anim_h = 0

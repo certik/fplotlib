@@ -32,11 +32,11 @@
 
 module test_fingerprint
     use, intrinsic :: iso_fortran_env, only: int64
-    use test_image_io, only: read_png_rgb, read_gif_frames
+    use test_image_io, only: read_png_rgb, read_apng_frames, read_gif_frames
     implicit none
     private
 
-    public :: fp_check_png, fp_check_gif, fp_finish
+    public :: fp_check_png, fp_check_apng, fp_check_gif, fp_finish
 
     ! FPHash-4096, version 1. Changing any of these invalidates every stored
     ! fingerprint, which then have to be regenerated with --update.
@@ -231,6 +231,19 @@ contains
         call read_png_rgb(path, rgb)
         call record(name, rgb)
     end subroutine fp_check_png
+
+    subroutine fp_check_apng(name, path)
+        character(len=*), intent(in) :: name, path
+        integer, allocatable :: frames(:, :, :, :)
+        character(len=8) :: suffix
+        integer :: k
+
+        call read_apng_frames(path, frames)
+        do k = 1, size(frames, 4)
+            write (suffix, "('_f',i2.2)") k
+            call record(name//trim(suffix), frames(:, :, :, k))
+        end do
+    end subroutine fp_check_apng
 
     ! Every frame is fingerprinted on its own, as name_f01, name_f02, ...
     subroutine fp_check_gif(name, path)
