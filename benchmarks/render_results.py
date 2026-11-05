@@ -10,7 +10,7 @@ from pathlib import Path
 
 RESULTS = Path(__file__).resolve().parent / "results"
 MACHINE_LABELS = [
-    ("cpu", "CPU"), ("logical_cores", "Logical cores"), ("os", "OS"),
+    ("cpu", "CPU"), ("cpu_ghz", "Clock speed (GHz)"), ("os", "OS"),
     ("fortran_compiler", "Fortran compiler"), ("fortran_flags", "Fortran flags"),
     ("fpm", "fpm"), ("python", "Python"), ("matplotlib", "Matplotlib"),
     ("numpy", "NumPy"),
@@ -27,7 +27,7 @@ def section(path, data):
            f"{e(m.get('os', ''))} &mdash; {e(data.get('date', ''))} "
            f"(<code>{e(path.name)}</code>)</summary>", "<h4>Machine</h4>", "<table>"]
     for key, label in MACHINE_LABELS:
-        if key in m:
+        if m.get(key) is not None:
             out.append(f"<tr><th>{label}</th><td>{e(m[key])}</td></tr>")
     out.append("</table>")
     out.append(f"<h4>Results (median of {e(data.get('repeats', '?'))} runs)</h4>")

@@ -56,12 +56,48 @@ def cpu_name():
     return platform.processor() or platform.machine()
 
 
+def cpu_ghz():
+    """Maximum clock speed in GHz when the OS reports it, else None."""
+    mhz = None
+    system = platform.system()
+    try:
+        if system == "Linux":
+            for line in first_text(["lscpu"]).splitlines():
+                if line.strip().startswith("CPU max MHz"):
+                    mhz = float(line.split(":", 1)[1])
+            if mhz is None:
+                for line in Path("/proc/cpuinfo").read_text().splitlines():
+                    if line.startswith("cpu MHz"):
+                        mhz = float(line.split(":", 1)[1])
+                        break
+        elif system == "Darwin":
+            mhz = float(first_line(["sysctl", "-n", "hw.cpufrequency_max"])) / 1e6
+        elif system == "Windows":
+            out = first_text(["powershell", "-NoProfile", "-Command",
+                              "(Get-CimInstance Win32_Processor).MaxClockSpeed"])
+            mhz = float(out.split()[0])
+    except (OSError, ValueError, IndexError):
+        pass
+    return round(mhz / 1000, 2) if mhz else None
+
+
+def first_text(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+
+
+def os_name():
+    return {"Darwin": "macOS"}.get(platform.system(), platform.system())
+
+
 def machine_info():
     import matplotlib, numpy
     return {
         "cpu": cpu_name(),
-        "logical_cores": os.cpu_count(),
-        "os": platform.platform(),
+        "cpu_ghz": cpu_ghz(),
+        "os": os_name(),
         "fortran_compiler": first_line(["gfortran", "--version"]),
         "fortran_flags": " ".join(FFLAGS),
         "fpm": first_line(["fpm", "--version"]),

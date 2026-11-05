@@ -1,6 +1,6 @@
 # Benchmark results
 
-One JSON file per machine and run. Each records the CPU, OS, Fortran compiler
+One JSON file per machine and run. Each records the CPU and its clock speed, the OS (Windows, Linux or macOS), Fortran compiler
 and flags, Python, Matplotlib and NumPy versions, and the timings.
 
 To contribute a result:
