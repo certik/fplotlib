@@ -2,9 +2,12 @@
 
 Measures: library compile time, import time (Python) vs program compile time
 (Fortran), and run time of simple/complex plots for PNG and PDF and a GIF animation.
-Usage: python benchmarks/run_benchmarks.py [--repeats N] [--out results.md]
+Usage: python benchmarks/run_benchmarks.py [--repeats N] [--save [NAME]]
+
+--save writes benchmarks/results/NAME.json with the machine description and
+the timings, ready to be proposed in a pull request.
 """
-import argparse, os, shutil, statistics, subprocess, sys, tempfile, time
+import argparse, datetime, json, os, platform, re, shutil, statistics, subprocess, sys, tempfile, time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -33,6 +36,41 @@ def check(path):
         sys.exit(f"missing or empty output: {path}")
 
 
+def first_line(cmd):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return (r.stdout or r.stderr).splitlines()[0].strip()
+    except (OSError, subprocess.CalledProcessError, IndexError):
+        return "unknown"
+
+
+def cpu_name():
+    try:
+        for line in Path("/proc/cpuinfo").read_text().splitlines():
+            if line.startswith("model name"):
+                return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    if platform.system() == "Darwin":
+        return first_line(["sysctl", "-n", "machdep.cpu.brand_string"])
+    return platform.processor() or platform.machine()
+
+
+def machine_info():
+    import matplotlib, numpy
+    return {
+        "cpu": cpu_name(),
+        "logical_cores": os.cpu_count(),
+        "os": platform.platform(),
+        "fortran_compiler": first_line(["gfortran", "--version"]),
+        "fortran_flags": " ".join(FFLAGS),
+        "fpm": first_line(["fpm", "--version"]),
+        "python": f"{platform.python_implementation()} {platform.python_version()}",
+        "matplotlib": matplotlib.__version__,
+        "numpy": numpy.__version__,
+    }
+
+
 def median(f, n):
     return statistics.median(f() for _ in range(n))
 
@@ -40,7 +78,9 @@ def median(f, n):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repeats", type=int, default=5)
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--save", nargs="?", const="", metavar="NAME", default=None,
+                    help="write benchmarks/results/NAME.json (default name: "
+                         "date and CPU)")
     a = ap.parse_args()
     rows = []
     work = Path(tempfile.mkdtemp())
@@ -75,11 +115,22 @@ def main():
             rows.append((f"Run {name} -> {ext}", "fplotlib", tf))
             rows.append((f"Run {name} -> {ext}", "matplotlib (excl. imports)", tp))
 
-    out = "| Benchmark | Variant | Time (s) |\n|---|---|---|\n"
-    out += "\n".join(f"| {a_} | {b} | {c:.4f} |" for a_, b, c in rows) + "\n"
-    print(out)
-    if a.out:
-        Path(a.out).write_text(out)
+    print(f"{'Benchmark':32} {'Variant':36} Time (s)")
+    for b, v, t in rows:
+        print(f"{b:32} {v:36} {t:.4f}")
+    if a.save is not None:
+        info = machine_info()
+        name = a.save or "{}-{}".format(
+            datetime.date.today().isoformat(),
+            re.sub(r"[^a-z0-9]+", "-", info["cpu"].lower()).strip("-"))
+        data = {"date": datetime.date.today().isoformat(), "repeats": a.repeats,
+                "machine": info,
+                "results": [{"benchmark": b, "variant": v, "seconds": round(t, 6)}
+                            for b, v, t in rows]}
+        dest = HERE / "results" / f"{name}.json"
+        dest.parent.mkdir(exist_ok=True)
+        dest.write_text(json.dumps(data, indent=2) + "\n")
+        print(f"\nSaved {dest}")
     shutil.rmtree(work, ignore_errors=True)
 
 
