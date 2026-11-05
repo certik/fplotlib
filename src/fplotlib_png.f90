@@ -21,7 +21,7 @@ module fplotlib_png
     ! zlib_compress is here rather than in the PDF backend because a PDF
     ! FlateDecode stream is the same zlib stream a PNG carries, and one
     ! compressor is enough.
-    public :: png_encode, zlib_compress
+    public :: png_encode, apng_encode, zlib_compress
 
     ! LZ77 parameters. WSIZE is fixed by the format; CHAIN bounds how hard the
     ! matcher looks before settling, which is the usual size/speed dial.
@@ -314,12 +314,113 @@ contains
         integer, intent(in) :: w, h
         integer, intent(in) :: rgba(4, w, h)
         character(len=:), allocatable :: bytes
-        integer, allocatable :: raw(:), comp(:), cur(:), up(:), try(:), best(:)
-        integer :: bpp, stride, nraw, x, y, c, i, p, f, score, bscore, bf
-        integer :: a_, b_, c_, v
         type(bitbuf_t) :: out
 
-        bpp = 4
+        call push_signature(out)
+        call ihdr(out, w, h, 6)
+        call chunk(out, "IDAT", filtered_zlib(w, h, 4, rgba))
+        call chunk(out, "IEND", NO_DATA)
+        bytes = to_string(out)
+    end function png_encode
+
+    ! ------------------------------------------------------------------
+    ! Encode nframes RGB frames as an animated PNG. pix holds the frames as
+    ! packed RGB bytes, one after another, as the animation reel keeps them.
+    ! A delay is delay_num/delay_den seconds; loop true repeats forever.
+    ! Every frame is a full, opaque replacement of the canvas, so the first
+    ! frame is also the default image that viewers without APNG support show.
+    ! ------------------------------------------------------------------
+
+    function apng_encode(w, h, nframes, pix, delay_num, delay_den, loop) result(bytes)
+        integer, intent(in) :: w, h, nframes, delay_num, delay_den
+        character(len=*), intent(in) :: pix
+        logical, intent(in) :: loop
+        character(len=:), allocatable :: bytes
+        integer, allocatable :: rgb(:, :, :), z(:), d(:)
+        integer :: f, x, y, c, k, seq, base, nz
+        type(bitbuf_t) :: out
+
+        allocate (rgb(3, w, h))
+        call push_signature(out)
+        call ihdr(out, w, h, 2)
+
+        allocate (d(8))
+        call be32(nframes, d(1:4))
+        d(5:8) = 0                  ! zero plays forever
+        if (.not. loop) call be32(1, d(5:8))
+        call chunk(out, "acTL", d)
+        deallocate (d)
+
+        seq = 0
+        do f = 1, nframes
+            base = (f - 1)*3*w*h
+            do concurrent (y = 1:h, x = 1:w, c = 1:3)
+                k = base + (y - 1)*3*w + (x - 1)*3 + c
+                rgb(c, x, y) = iachar(pix(k:k))
+            end do
+
+            allocate (d(26))
+            call be32(seq, d(1:4))
+            call be32(w, d(5:8))
+            call be32(h, d(9:12))
+            d(13:20) = 0            ! x and y offset
+            d(21) = iand(ishft(delay_num, -8), 255)
+            d(22) = iand(delay_num, 255)
+            d(23) = iand(ishft(delay_den, -8), 255)
+            d(24) = iand(delay_den, 255)
+            d(25) = 0               ! dispose: leave the canvas as it is
+            d(26) = 0               ! blend: replace
+            call chunk(out, "fcTL", d)
+            deallocate (d)
+            seq = seq + 1
+
+            z = filtered_zlib(w, h, 3, rgb)
+            if (f == 1) then
+                call chunk(out, "IDAT", z)
+            else
+                nz = size(z)
+                allocate (d(4 + nz))
+                call be32(seq, d(1:4))
+                d(5:) = z
+                call chunk(out, "fdAT", d)
+                deallocate (d)
+                seq = seq + 1
+            end if
+        end do
+
+        call chunk(out, "IEND", NO_DATA)
+        bytes = to_string(out)
+    end function apng_encode
+
+    subroutine push_signature(out)
+        type(bitbuf_t), intent(inout) :: out
+
+        call push(out, 137); call push(out, 80); call push(out, 78)
+        call push(out, 71); call push(out, 13); call push(out, 10)
+        call push(out, 26); call push(out, 10)
+    end subroutine push_signature
+
+    function to_string(out) result(bytes)
+        type(bitbuf_t), intent(in) :: out
+        character(len=:), allocatable :: bytes
+        integer :: i
+
+        allocate (character(len=out%n) :: bytes)
+        do i = 1, out%n
+            bytes(i:i) = achar(out%b(i))
+        end do
+    end function to_string
+
+    ! The zlib stream of an image's scanlines, each filtered with whichever of
+    ! the five PNG filters looks cheapest. px is bpp interleaved channels.
+    function filtered_zlib(w, h, bpp, px) result(z)
+        integer, intent(in) :: w, h, bpp
+        integer, intent(in) :: px(bpp, w, h)
+        integer, allocatable :: z(:)
+        integer, allocatable :: raw(:), comp(:), cur(:), up(:), try(:), best(:)
+        integer :: stride, nraw, x, y, c, i, p, f, score, bscore, bf
+        integer :: a_, b_, c_, v
+
         stride = w*bpp
         nraw = h*(stride + 1)
         allocate (raw(nraw), cur(stride), up(stride), try(stride), best(stride))
@@ -329,9 +430,9 @@ contains
         do y = 1, h
             i = 0
             do x = 1, w
-                do c = 1, 4
+                do c = 1, bpp
                     i = i + 1
-                    cur(i) = iand(rgba(c, x, y), 255)
+                    cur(i) = iand(px(c, x, y), 255)
                 end do
             end do
 
@@ -372,21 +473,8 @@ contains
         end do
 
         comp = deflate(raw, nraw)
-
-        ! Signature
-        call push(out, 137); call push(out, 80); call push(out, 78)
-        call push(out, 71); call push(out, 13); call push(out, 10)
-        call push(out, 26); call push(out, 10)
-
-        call ihdr(out, w, h)
-        call chunk(out, "IDAT", zlib_wrap(comp, raw, nraw))
-        call chunk(out, "IEND", NO_DATA)
-
-        allocate (character(len=out%n) :: bytes)
-        do i = 1, out%n
-            bytes(i:i) = achar(out%b(i))
-        end do
-    end function png_encode
+        z = zlib_wrap(comp, raw, nraw)
+    end function filtered_zlib
 
     ! Bytes in, a zlib stream out. Unlike a PNG the caller supplies its own
     ! layout, so nothing is filtered here.
@@ -421,15 +509,15 @@ contains
         z(n + 6) = iand(a, 255)
     end function zlib_wrap
 
-    subroutine ihdr(out, w, h)
+    subroutine ihdr(out, w, h, ctype)
         type(bitbuf_t), intent(inout) :: out
-        integer, intent(in) :: w, h
+        integer, intent(in) :: w, h, ctype
         integer :: d(13)
 
         call be32(w, d(1:4))
         call be32(h, d(5:8))
         d(9) = 8      ! bit depth
-        d(10) = 6     ! truecolor with alpha
+        d(10) = ctype ! 2 truecolor, 6 truecolor with alpha
         d(11) = 0     ! deflate
         d(12) = 0     ! adaptive filtering
         d(13) = 0     ! no interlace

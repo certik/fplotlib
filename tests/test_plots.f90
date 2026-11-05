@@ -1,6 +1,6 @@
 program test_plots
     use fplotlib
-    use test_fingerprint, only: fp_check_png, fp_check_gif, fp_finish
+    use test_fingerprint, only: fp_check_png, fp_check_apng, fp_check_gif, fp_finish
     implicit none
     integer :: fig1
     type(axes), allocatable :: axs(:, :)
@@ -1545,6 +1545,18 @@ program test_plots
     call save_animation("tests/out/anim_sine.gif", fps=10.0_dp)
     call fp_check_gif("anim_sine", "tests/out/anim_sine.gif")
     print *, "wrote tests/out/anim_sine.gif"
+
+! 75) the same animation as an APNG, with full colour
+    do i = 1, 20
+        call clf()
+        call plot(x, sin(x + real(i - 1, dp)*0.3_dp), "b-")
+        call ylim(-1.5_dp, 1.5_dp)
+        call title("anim_sine")
+        call add_frame()
+    end do
+    call save_animation("tests/out/anim_sine.png", fps=10.0_dp)
+    call fp_check_apng("anim_sine_apng", "tests/out/anim_sine.png")
+    print *, "wrote tests/out/anim_sine.png"
 
     print *, "All test plots written."
 

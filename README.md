@@ -123,7 +123,7 @@ call suptitle("figure title")
   scale along an edge
 - `table` for a block of text below (or above) the axes
 - `streamplot` for the streamlines of a vector field
-- `add_frame` / `save_animation(file, fps=, loop=)` to write an animated GIF
+- `add_frame` / `save_animation(file, fps=, loop=)` to write an animated GIF, or a full-colour animated PNG with a `.png` or `.apng` file name
 - `spy` (sparsity pattern of a dense matrix or COO indices), `matshow`, `eventplot` and `broken_barh`
 - `hist2d` and `hexbin` for counting points into square or hexagonal bins
 - `imshow(interpolation="bilinear")` to smooth an image instead of
