@@ -23,6 +23,7 @@ Measured items:
 
 Each entry below is one run on one machine; click it to open or close the
 table. Timings are medians and are only comparable within a single entry.
+Matplotlib run times exclude imports, which are measured separately (look for the "Import" lines).
 
 To add your machine, run the command above and propose the new
 `benchmarks/results/*.json` file in a pull request. The `github-actions` entry

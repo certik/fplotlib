@@ -31,11 +31,24 @@ def section(path, data):
             out.append(f"<tr><th>{label}</th><td>{e(m[key])}</td></tr>")
     out.append("</table>")
     out.append(f"<h4>Results (median of {e(data.get('repeats', '?'))} runs)</h4>")
-    out.append("<table><tr><th>Benchmark</th><th>Variant</th>"
-               "<th>Time (s)</th></tr>")
+    out.append("<table><tr><th>Benchmark</th><th>fplotlib (s)</th>"
+               "<th>matplotlib (s)</th></tr>")
+    results = {}
     for r in data["results"]:
-        out.append(f"<tr><td>{e(r['benchmark'])}</td><td>{e(r['variant'])}</td>"
-                   f"<td>{r['seconds']:.4f}</td></tr>")
+        variant = r["variant"]
+        if variant.startswith(("fplotlib", "Fortran compile")):
+            column = "fplotlib"
+        elif variant.startswith(("matplotlib", "Python imports")):
+            column = "matplotlib"
+        else:
+            raise ValueError(f"Unknown benchmark variant: {variant}")
+        timings = results.setdefault(r["benchmark"], {})
+        if column in timings:
+            raise ValueError(f"Duplicate {column} result for {r['benchmark']}")
+        timings[column] = f"{r['seconds']:.4f}"
+    for benchmark, timings in results.items():
+        out.append(f"<tr><td>{e(benchmark)}</td><td>{timings.get('fplotlib', '')}</td>"
+                   f"<td>{timings.get('matplotlib', '')}</td></tr>")
     out.append("</table></details>")
     return "\n".join(out)
 
