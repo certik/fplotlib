@@ -122,3 +122,22 @@ jobs:
         with:
           name: tests-out-matplotlib
           path: tests/out/
+
+  # Human-only commit authorship: no AI author, committer, or Co-Authored-By
+  # stamp. Same checker as LFortran's Quick checks. AI tools may help write
+  # the code; a human still has to be the one who submits and guarantees it.
+  # Legitimate human co-authors are left alone. The script compares
+  # origin/main..HEAD, so it needs the base branch and the whole PR history.
+  authorship:
+    name: AI commit authorship
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the authorship patterns
+        run: python3 check_ai_commit_authorship.py --self-test
+
+      - name: Check for AI commit authorship
+        run: python3 check_ai_commit_authorship.py
