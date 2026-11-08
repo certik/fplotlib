@@ -8,4 +8,5 @@
 
 api/index
 auto_gallery/index
+benchmarks
 ```

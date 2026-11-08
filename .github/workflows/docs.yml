@@ -28,6 +28,7 @@ on:
       # reference reads the sources.
       - 'src/**'
       - 'examples/**'
+      - 'benchmarks/**'
       - 'fpm.toml'
   pull_request:
     paths: *paths
@@ -106,6 +107,13 @@ jobs:
           python --version
           sphinx-build --version
           ford --version
+
+      # Adds benchmarks/results/github-actions.json, which docs/conf.py renders
+      # on the benchmarks page. Not committed; timings from the CI runner.
+      - name: Run benchmarks
+        run: |
+          pip install -r benchmarks/requirements.txt
+          python benchmarks/run_benchmarks.py --repeats 5 --save github-actions
 
       - name: Build Docs
         env:

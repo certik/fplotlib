@@ -24,3 +24,7 @@ __pycache__/
 docs/_build/
 docs/auto_gallery/
 docs/sg_execution_times.rst
+
+# generated docs content
+docs/_generated/
+benchmarks/results/github-actions.json

@@ -1,0 +1,102 @@
+{
+  "date": "2026-11-07",
+  "repeats": 5,
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz",
+    "cpu_ghz": 0.4,
+    "os": "Linux",
+    "fortran_compiler": "GNU Fortran (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+    "fortran_flags": "-O3 -march=native",
+    "fpm": "Version:     0.13.0, alpha",
+    "python": "CPython 3.14.4",
+    "matplotlib": "3.11.2",
+    "numpy": "2.3.5"
+  },
+  "results": [
+    {
+      "benchmark": "Compile library",
+      "variant": "fplotlib (fpm build, -O3)",
+      "seconds": 21.074636
+    },
+    {
+      "benchmark": "Compile simple program",
+      "variant": "Fortran compile to binary",
+      "seconds": 0.110779
+    },
+    {
+      "benchmark": "Import simple script",
+      "variant": "Python imports (matplotlib, numpy)",
+      "seconds": 0.43922
+    },
+    {
+      "benchmark": "Run simple -> png",
+      "variant": "fplotlib",
+      "seconds": 0.048328
+    },
+    {
+      "benchmark": "Run simple -> png",
+      "variant": "matplotlib (excl. imports)",
+      "seconds": 0.074703
+    },
+    {
+      "benchmark": "Run simple -> pdf",
+      "variant": "fplotlib",
+      "seconds": 0.002185
+    },
+    {
+      "benchmark": "Run simple -> pdf",
+      "variant": "matplotlib (excl. imports)",
+      "seconds": 0.133638
+    },
+    {
+      "benchmark": "Compile complex program",
+      "variant": "Fortran compile to binary",
+      "seconds": 0.11186
+    },
+    {
+      "benchmark": "Import complex script",
+      "variant": "Python imports (matplotlib, numpy)",
+      "seconds": 0.425692
+    },
+    {
+      "benchmark": "Run complex -> png",
+      "variant": "fplotlib",
+      "seconds": 0.069669
+    },
+    {
+      "benchmark": "Run complex -> png",
+      "variant": "matplotlib (excl. imports)",
+      "seconds": 0.152285
+    },
+    {
+      "benchmark": "Run complex -> pdf",
+      "variant": "fplotlib",
+      "seconds": 0.056001
+    },
+    {
+      "benchmark": "Run complex -> pdf",
+      "variant": "matplotlib (excl. imports)",
+      "seconds": 0.226113
+    },
+    {
+      "benchmark": "Compile animation program",
+      "variant": "Fortran compile to binary",
+      "seconds": 0.090391
+    },
+    {
+      "benchmark": "Import animation script",
+      "variant": "Python imports (matplotlib, numpy)",
+      "seconds": 0.43272
+    },
+    {
+      "benchmark": "Run animation -> gif",
+      "variant": "fplotlib",
+      "seconds": 0.966446
+    },
+    {
+      "benchmark": "Run animation -> gif",
+      "variant": "matplotlib (excl. imports)",
+      "seconds": 4.471388
+    }
+  ]
+}

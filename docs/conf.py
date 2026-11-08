@@ -38,7 +38,7 @@ templates_path = ['_templates']
 # 'gallery' holds the gallery *sources*; Sphinx-Gallery copies them into
 # 'auto_gallery', so leaving them visible here would give every label and
 # document in them a duplicate.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'gallery']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'gallery', '_generated']
 
 # Select a lexer (built-in: "regex")
 fortran_lexer = "ford"
@@ -95,3 +95,12 @@ html_title = f"{project} {release}"
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = False
+
+# -- Benchmarks --------------------------------------------------------------
+# docs/benchmarks.md includes a page rendered from benchmarks/results/*.json.
+sys.path.insert(0, os.path.abspath('../benchmarks'))
+import render_results  # noqa: E402
+
+os.makedirs('_generated', exist_ok=True)
+with open(os.path.join('_generated', 'benchmarks_results.md'), 'w') as f:
+    f.write(render_results.render())
