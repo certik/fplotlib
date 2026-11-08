@@ -51,7 +51,7 @@ program plot_lorenz_attractor
         ! We use temporary variables to avoid overwriting values needed for other derivatives
         dx(1) = sigma * (x_curr(2) - x_curr(1))
         dx(2) = x_curr(1) * (rho - x_curr(3)) - x_curr(2)
-        dx(3) = x_curr(1) * x_curr - beta * x_curr(3)
+        dx(3) = x_curr(1) * x_curr(2) - beta * x_curr(3)
 
         ! Update positions using Euler method
         x_curr = x_curr + dt * dx
