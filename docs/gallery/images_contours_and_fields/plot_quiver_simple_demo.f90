@@ -12,7 +12,7 @@
 ! ``[dependencies]`` of your ``fpm.toml``.
 
 program plot_quiver_simple_demo
-    use fplotlib
+    use fplotlib, only: dp, quiver, quiverkey, savefig
     use stdlib_math, only: arange, meshgrid
     implicit none
 

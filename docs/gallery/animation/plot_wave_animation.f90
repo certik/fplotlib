@@ -9,7 +9,8 @@
 ! The picture below is the finished GIF, playing in the page.
 
 program plot_wave_animation
-    use fplotlib
+    use fplotlib, only: add_frame, clf, dp, fill_between, grid, plot, save_animation, &
+                        title, xlabel, xlim, ylabel, ylim
     implicit none
 
     integer, parameter :: n = 240, n_frames = 40
@@ -24,6 +25,10 @@ program plot_wave_animation
     envelope = exp(-decay*x)
 
 ! %%
+! Each frame shows the damped travelling wave
+! :math:`y(x) = e^{-\gamma x} \sin(k x - \varphi)`, with the phase
+! :math:`\varphi` advancing from :math:`0` to :math:`2\pi` over the loop.
+!
 ! One frame per phase step. The axis limits are set explicitly inside the
 ! loop: without them every frame would autoscale to its own data and the
 ! animation would jitter.
