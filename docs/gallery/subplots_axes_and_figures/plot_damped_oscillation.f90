@@ -7,10 +7,11 @@
 ! at any zoom level.
 !
 ! Every example in this gallery is a plain Fortran program: it starts with
-! ``use fplotlib`` and ends with a ``savefig`` call.
+! ``use fplotlib, only: ...`` and ends with a ``savefig`` call.
 
 program plot_damped_oscillation
-    use fplotlib
+    use fplotlib, only: axhline, dp, fill_between, grid, legend, plot, savefig, title, &
+                        xlabel, ylabel
     implicit none
 
     integer, parameter :: n = 400
@@ -27,7 +28,10 @@ program plot_damped_oscillation
     y2 = cos(omega*t)*envelope
 
 ! %%
-! The envelope first, so the curves are drawn on top of it. :f:subr:`fill_between`
+! The curves are :math:`e^{-\gamma t} \sin \omega t` and
+! :math:`e^{-\gamma t} \cos \omega t`, bounded by the envelope
+! :math:`\pm e^{-\gamma t}`. The envelope goes first, so the curves are drawn on
+! top of it. :f:subr:`fill_between`
 ! takes the band between two curves; ``alpha`` makes it translucent.
 
     call fill_between(t, -envelope, envelope, color="gray", alpha=0.25_dp, &

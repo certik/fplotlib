@@ -11,7 +11,7 @@
 ! ``(2, nnz)`` integer array of rows and columns. Indices start at 1.
 
 program plot_spy
-    use fplotlib
+    use fplotlib, only: dp, figure, savefig, spy, subplot, title
     implicit none
 
     integer, parameter :: n = 30
