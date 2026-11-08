@@ -26,7 +26,7 @@ program plot_lorenz_attractor
 
     integer, parameter :: n_steps = 10000
     real(dp) :: x(n_steps), y(n_steps), z(n_steps)
-    real(dp) :: x_curr, y_curr, z_curr, dt
+    real(dp) :: x_curr(3), dx(3), dt
     integer :: i
     real(dp), parameter :: sigma = 10.0_dp, rho = 28.0_dp, beta = 8.0_dp/3.0_dp
 
@@ -35,8 +35,6 @@ program plot_lorenz_attractor
 ! integration
 
     x_curr = 1.0_dp
-    y_curr = 1.0_dp
-    z_curr = 1.0_dp
     dt = 0.01_dp
 
 ! %%
@@ -45,23 +43,18 @@ program plot_lorenz_attractor
 ! Each iteration computes the derivatives and updates the position.
 
     do i = 1, n_steps
-        x(i) = x_curr
-        y(i) = y_curr
-        z(i) = z_curr
+        x(i) = x_curr(1)
+        y(i) = x_curr(2)
+        z(i) = x_curr(3)
 
         ! Compute derivatives (Lorenz equations)
         ! We use temporary variables to avoid overwriting values needed for other derivatives
-        block
-            real(dp) :: dx, dy, dz
-            dx = sigma * (y_curr - x_curr)
-            dy = x_curr * (rho - z_curr) - y_curr
-            dz = x_curr * y_curr - beta * z_curr
+        dx(1) = sigma * (x_curr(2) - x_curr(1))
+        dx(2) = x_curr(1) * (rho - x_curr(3)) - x_curr(2)
+        dx(3) = x_curr(1) * x_curr - beta * x_curr(3)
 
-            ! Update positions using Euler method
-            x_curr = x_curr + dt * dx
-            y_curr = y_curr + dt * dy
-            z_curr = z_curr + dt * dz
-        end block
+        ! Update positions using Euler method
+        x_curr = x_curr + dt * dx
     end do
 
 ! %%
