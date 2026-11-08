@@ -108,9 +108,9 @@ the code either side of it into separate blocks::
 Nothing else is required: ``savefig("name.svg")`` puts that picture under this
 block, and any format fplotlib writes will do.
 
-Two things to know when building animations.  Frames have to come out the same
-size, so keep anything that changes the layout out of the frame loop, and
-``save_animation`` only writes GIF.
+Frames in an animation have to come out the same size, so keep anything that
+changes the layout out of the frame loop.  ``save_animation`` writes GIF or
+animated PNG; use a ``.png`` filename to embed an APNG in the gallery.
 
 The gallery header
 ------------------
