@@ -41,5 +41,8 @@ The gallery is organized into the following topic areas:
 * **{doc}`Subplots, Axes and Figures </auto_gallery/subplots_axes_and_figures/index>`** —
   Layout management, figure sizing, and axes control.
 
+* **{doc}`Text, labels and annotations </auto_gallery/text_labels_and_annotations/index>`** —
+  Text on a figure, including mathtext between dollar signs.
+
 * **{doc}`Animation </auto_gallery/animation/index>`** —
   Animated GIFs built frame by frame.
