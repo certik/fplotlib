@@ -477,6 +477,10 @@ contains
             call put_num(self, y)
             call put(self, ')"')
         end if
+        ! The default whitespace rule throws away a leading space, so a
+        ! run that starts with one draws its first glyph where the space
+        ! should have been. preserve keeps the space the layout measured.
+        call put(self, ' xml:space="preserve"')
         call put(self, ">")
         ! Escaping is the backend's business: the caller hands over the text
         ! the user asked for, and each format spells it its own way.

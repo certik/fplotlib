@@ -3,7 +3,7 @@
 !
 ! Every construct fplotlib's mathtext lays out. A pair of ``$`` signs
 ! switches into math and back, and text outside them is copied through
-! unchanged. Letters in math slope; digits, punctuation and spaces stay
+! unchanged. Letters in math slope; digits and punctuation stay
 ! upright. The glyphs are the ordinary text font.
 !
 ! These commands have their own layout:
@@ -19,7 +19,8 @@
 ! * ``\times`` is the multiplication sign.
 ! * ``\,`` inserts a thin space and ``\;`` a thick one. A backslash
 !   followed by a space inserts a word space. A space typed between
-!   symbols is kept as well.
+!   symbols is dropped, and the layout puts its own space back around
+!   an operator, so ``$a b$`` is the same as ``$ab$``.
 !
 ! ``^`` and ``_`` raise and lower the next character, or the next group
 ! in braces. Several scripts in a row share one base, so ``x_{i}^{2}``
